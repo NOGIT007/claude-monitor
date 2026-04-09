@@ -1,18 +1,6 @@
 import type { ActiveSession } from "../types";
 import { formatNumber, formatCost, formatElapsed } from "../format";
 
-// Inject keyframes once (idempotent for HMR)
-if (typeof document !== "undefined" && !document.getElementById("pulse-glow-style")) {
-  const style = document.createElement("style");
-  style.id = "pulse-glow-style";
-  style.textContent = `
-@keyframes pulse-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(166, 227, 161, 0.15); }
-  50% { box-shadow: 0 0 12px 2px rgba(166, 227, 161, 0.25); }
-}`;
-  document.head.appendChild(style);
-}
-
 const tokenLabels: { key: keyof ActiveSession["totals"]; label: string; color: string }[] = [
   { key: "input", label: "Input", color: "var(--ctp-blue)" },
   { key: "output", label: "Output", color: "var(--ctp-peach)" },
@@ -29,7 +17,6 @@ export function SessionCard({ sessionId, projectPath, model, elapsedMs, totals }
       className="card"
       style={{
         animation: isRecent ? "pulse-glow 2s ease-in-out infinite" : undefined,
-        border: `1px solid var(--ctp-surface1)`,
       }}
     >
       {/* Header */}
@@ -38,20 +25,25 @@ export function SessionCard({ sessionId, projectPath, model, elapsedMs, totals }
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: "0.75rem",
+          marginBottom: "1rem",
         }}
       >
-        <span style={{ fontWeight: 600, fontSize: "1rem", color: "var(--ctp-text)" }}>
+        <span
+          style={{
+            fontFamily: "var(--font-display)",
+            fontWeight: 700,
+            fontSize: "1rem",
+            color: "var(--ctp-text)",
+          }}
+        >
           {projectName}
         </span>
         <span
+          className="model-badge"
           style={{
-            background: "var(--ctp-surface1)",
+            background: "rgba(180, 190, 254, 0.1)",
             color: "var(--ctp-lavender)",
-            fontSize: "0.7rem",
-            fontWeight: 600,
-            padding: "0.15rem 0.5rem",
-            borderRadius: 6,
+            border: "1px solid rgba(180, 190, 254, 0.15)",
           }}
         >
           {model}
@@ -61,12 +53,14 @@ export function SessionCard({ sessionId, projectPath, model, elapsedMs, totals }
       {/* Elapsed */}
       <div
         style={{
-          fontSize: "0.8rem",
+          fontFamily: "var(--font-mono)",
+          fontSize: "0.75rem",
           color: "var(--ctp-subtext0)",
-          marginBottom: "0.75rem",
+          marginBottom: "1rem",
+          letterSpacing: "0.02em",
         }}
       >
-        Elapsed: {formatElapsed(elapsedMs)}
+        {formatElapsed(elapsedMs)}
       </div>
 
       {/* Token grid */}
@@ -74,16 +68,31 @@ export function SessionCard({ sessionId, projectPath, model, elapsedMs, totals }
         style={{
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
-          gap: "0.5rem",
-          marginBottom: "0.75rem",
+          gap: "0.75rem",
+          marginBottom: "1rem",
+          padding: "0.75rem",
+          background: "rgba(17, 17, 27, 0.4)",
+          borderRadius: 10,
         }}
       >
         {tokenLabels.map(({ key, label, color }) => (
           <div key={key}>
-            <div style={{ fontSize: "0.7rem", color: "var(--ctp-overlay1)", marginBottom: 2 }}>
+            <div
+              style={{
+                fontSize: "0.6rem",
+                fontFamily: "var(--font-display)",
+                color: "var(--ctp-overlay0)",
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                marginBottom: 3,
+              }}
+            >
               {label}
             </div>
-            <div style={{ fontSize: "0.9rem", fontWeight: 600, color }}>
+            <div
+              className="metric-value"
+              style={{ fontSize: "0.9rem", color }}
+            >
               {formatNumber(totals[key])}
             </div>
           </div>
@@ -92,10 +101,10 @@ export function SessionCard({ sessionId, projectPath, model, elapsedMs, totals }
 
       {/* Cost */}
       <div
+        className="metric-value"
         style={{
           textAlign: "right",
-          fontWeight: 700,
-          fontSize: "1rem",
+          fontSize: "1.1rem",
           color: "var(--ctp-yellow)",
         }}
       >

@@ -52,16 +52,7 @@ export function StatsTabs({ onStatsChange, onPeriodChange }: Props) {
           <button
             key={key}
             onClick={() => setActive(key)}
-            style={{
-              padding: "0.4rem 1rem",
-              borderRadius: 8,
-              border: "none",
-              cursor: "pointer",
-              fontWeight: 600,
-              fontSize: "0.85rem",
-              background: active === key ? "var(--ctp-blue)" : "var(--ctp-surface0)",
-              color: active === key ? "var(--ctp-crust)" : "var(--ctp-subtext0)",
-            }}
+            className={`tab-btn ${active === key ? "tab-btn--active" : "tab-btn--inactive"}`}
           >
             {label}
           </button>

@@ -81,25 +81,27 @@ export function App() {
   }, [connectWs]);
 
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "1.5rem" }}>
+    <div style={{ maxWidth: 1200, margin: "0 auto", padding: "2rem 1.5rem 3rem" }}>
       {/* Top bar */}
       <header
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          marginBottom: "2rem",
-          paddingBottom: "1rem",
-          borderBottom: `1px solid var(--ctp-surface0)`,
+          marginBottom: "2.5rem",
+          paddingBottom: "1.25rem",
+          borderBottom: `1px solid rgba(69, 71, 90, 0.3)`,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+        <div style={{ display: "flex", alignItems: "baseline", gap: "0.75rem" }}>
           <h1
             style={{
               margin: 0,
-              fontSize: "1.5rem",
-              fontWeight: 700,
+              fontFamily: "var(--font-display)",
+              fontSize: "1.6rem",
+              fontWeight: 800,
               color: "var(--ctp-lavender)",
+              letterSpacing: "-0.02em",
             }}
           >
             Claude Monitor
@@ -107,44 +109,53 @@ export function App() {
           {sessions.length > 0 && (
             <span
               style={{
-                background: "var(--ctp-green)",
-                color: "var(--ctp-crust)",
-                fontSize: "0.75rem",
-                fontWeight: 700,
-                padding: "0.15rem 0.5rem",
-                borderRadius: 999,
+                background: "rgba(166, 227, 161, 0.15)",
+                color: "var(--ctp-green)",
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.7rem",
+                fontWeight: 600,
+                padding: "0.2rem 0.6rem",
+                borderRadius: 20,
+                border: "1px solid rgba(166, 227, 161, 0.2)",
               }}
             >
               {sessions.length} active
             </span>
           )}
         </div>
-        <span style={{ fontSize: "0.75rem", color: "var(--ctp-overlay0)" }}>
-          Powered by Bun
+        <span
+          style={{
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.65rem",
+            color: "var(--ctp-overlay0)",
+            letterSpacing: "0.05em",
+          }}
+        >
+          powered by bun
         </span>
       </header>
 
       {/* Live Sessions */}
-      <section style={{ marginBottom: "2rem" }}>
-        <h2 style={sectionTitle}>Live Sessions</h2>
+      <section style={{ marginBottom: "2.5rem" }}>
+        <h2 className="section-title">Live Sessions</h2>
         <LiveSessions sessions={sessions} />
       </section>
 
       {/* Stats with comparison badges */}
       <section style={{ marginBottom: "2rem" }}>
-        <h2 style={sectionTitle}>Usage Statistics</h2>
+        <h2 className="section-title">Usage Statistics</h2>
         <StatsTabs onStatsChange={setCurrentStats} onPeriodChange={setPeriod} />
       </section>
 
       {/* Session Stats */}
       <section style={{ marginBottom: "2rem" }}>
-        <h2 style={sectionTitle}>Session Metrics</h2>
+        <h2 className="section-title">Session Metrics</h2>
         <SessionStats period={period} />
       </section>
 
       {/* Efficiency */}
       <section style={{ marginBottom: "2rem" }}>
-        <h2 style={sectionTitle}>Efficiency</h2>
+        <h2 className="section-title">Efficiency</h2>
         <EfficiencyMetrics stats={currentStats} />
       </section>
 
@@ -154,17 +165,17 @@ export function App() {
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
           gap: "1.5rem",
-          marginBottom: "2rem",
+          marginBottom: "2.5rem",
         }}
       >
         <section>
-          <h2 style={sectionTitle}>Cost per Project</h2>
+          <h2 className="section-title">Cost per Project</h2>
           <div className="card">
             <ProjectCosts period={period} />
           </div>
         </section>
         <section>
-          <h2 style={sectionTitle}>Model Breakdown</h2>
+          <h2 className="section-title">Model Breakdown</h2>
           <div className="card">
             <ModelBreakdown period={period} />
           </div>
@@ -177,17 +188,17 @@ export function App() {
           display: "grid",
           gridTemplateColumns: "1fr 1fr",
           gap: "1.5rem",
-          marginBottom: "2rem",
+          marginBottom: "2.5rem",
         }}
       >
         <section>
-          <h2 style={sectionTitle}>Cost Trend</h2>
+          <h2 className="section-title">Cost Trend</h2>
           <div className="card">
             <CostTrendChart />
           </div>
         </section>
         <section>
-          <h2 style={sectionTitle}>Peak Hours</h2>
+          <h2 className="section-title">Peak Hours</h2>
           <div className="card">
             <PeakHours />
           </div>
@@ -203,13 +214,13 @@ export function App() {
         }}
       >
         <section>
-          <h2 style={sectionTitle}>Token History</h2>
+          <h2 className="section-title">Token History</h2>
           <div className="card">
             <TokenChart history={history} />
           </div>
         </section>
         <section>
-          <h2 style={sectionTitle}>Token Breakdown</h2>
+          <h2 className="section-title">Token Breakdown</h2>
           <div className="card">
             {currentStats ? (
               <BreakdownChart stats={currentStats} />
@@ -225,10 +236,4 @@ export function App() {
   );
 }
 
-const sectionTitle: React.CSSProperties = {
-  fontSize: "1.1rem",
-  fontWeight: 600,
-  color: "var(--ctp-subtext1)",
-  marginBottom: "0.75rem",
-  marginTop: 0,
-};
+// Section titles now use .section-title CSS class from theme.css
