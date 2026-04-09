@@ -1,0 +1,26 @@
+{
+  "spec": "docs/superpowers/specs/2026-04-09-claude-monitor-design.md",
+  "created": "2026-04-09",
+  "tasks": [
+    { "id": 3,  "subject": "Project scaffold", "deps": [] },
+    { "id": 4,  "subject": "src/db.ts", "deps": [3] },
+    { "id": 5,  "subject": "src/pricing.ts", "deps": [3] },
+    { "id": 6,  "subject": "src/ingest.ts", "deps": [4, 5] },
+    { "id": 7,  "subject": "src/watcher.ts", "deps": [6] },
+    { "id": 8,  "subject": "src/ws.ts", "deps": [4] },
+    { "id": 9,  "subject": "src/api.ts", "deps": [4] },
+    { "id": 10, "subject": "src/server.ts", "deps": [7, 8, 9] },
+    { "id": 11, "subject": "src/index.html + theme.css", "deps": [3] },
+    { "id": 12, "subject": "React client components", "deps": [11] },
+    { "id": 13, "subject": "scripts/start.sh + stop.sh", "deps": [3] },
+    { "id": 14, "subject": "Build pipeline", "deps": [10, 12, 13] }
+  ],
+  "parallel_groups": [
+    { "group": 1, "tasks": [3], "note": "Foundation — must complete first" },
+    { "group": 2, "tasks": [4, 5, 11, 13], "note": "Can run in parallel after scaffold" },
+    { "group": 3, "tasks": [6, 8, 9], "note": "Can run in parallel after db/pricing" },
+    { "group": 4, "tasks": [7, 12], "note": "Can run in parallel after ingest/html" },
+    { "group": 5, "tasks": [10], "note": "Server wires everything together" },
+    { "group": 6, "tasks": [14], "note": "Build verification — final step" }
+  ]
+}

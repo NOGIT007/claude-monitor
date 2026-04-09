@@ -1,0 +1,83 @@
+<h2>What kind of monitoring experience do you want?</h2>
+<p class="subtitle">These three directions have very different feels. Pick the one that matches your workflow.</p>
+
+<div class="cards">
+  <div class="card" data-choice="terminal" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0d1117;padding:16px;font-family:monospace;font-size:12px;color:#58a6ff;border-radius:8px;min-height:120px">
+      <div style="color:#3fb950">● claude-monitoring active</div>
+      <div style="color:#8b949e;margin-top:8px">Session: c8c3e586  Model: claude-sonnet-4-6</div>
+      <div style="margin-top:12px">
+        <span style="color:#f0883e">Tokens in:</span> <span style="color:#fff">42,103</span>
+        <span style="color:#8b949e"> │ </span>
+        <span style="color:#f0883e">Tokens out:</span> <span style="color:#fff">8,421</span>
+      </div>
+      <div style="margin-top:4px">
+        <span style="color:#f0883e">Cache hit:</span> <span style="color:#fff">180,234</span>
+        <span style="color:#8b949e"> │ </span>
+        <span style="color:#f0883e">Cost:</span> <span style="color:#3fb950">$0.24</span>
+      </div>
+      <div style="margin-top:12px;color:#8b949e">━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</div>
+      <div style="margin-top:4px;color:#8b949e">▶ Tools used: Bash(12) Grep(8) Read(6)</div>
+    </div>
+    <div class="card-body">
+      <h3>Terminal Dashboard</h3>
+      <p>A <code>bun run dev</code> CLI dashboard in your terminal — like <code>htop</code> for Claude. Fast, minimal, no browser needed. Bun HMR keeps it live.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="web" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#1e1e2e;padding:16px;border-radius:8px;min-height:120px">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div style="background:#313244;border-radius:6px;padding:8px 12px;flex:1;text-align:center">
+          <div style="font-size:10px;color:#cdd6f4;opacity:.6">INPUT TOKENS</div>
+          <div style="font-size:20px;font-weight:700;color:#89b4fa">42,103</div>
+        </div>
+        <div style="background:#313244;border-radius:6px;padding:8px 12px;flex:1;text-align:center">
+          <div style="font-size:10px;color:#cdd6f4;opacity:.6">OUTPUT TOKENS</div>
+          <div style="font-size:20px;font-weight:700;color:#a6e3a1">8,421</div>
+        </div>
+        <div style="background:#313244;border-radius:6px;padding:8px 12px;flex:1;text-align:center">
+          <div style="font-size:10px;color:#cdd6f4;opacity:.6">EST. COST</div>
+          <div style="font-size:20px;font-weight:700;color:#f9e2af">$0.24</div>
+        </div>
+      </div>
+      <div style="background:#313244;border-radius:6px;padding:8px;height:40px;display:flex;align-items:flex-end;gap:3px">
+        <div style="background:#89b4fa;width:8px;height:60%"></div>
+        <div style="background:#89b4fa;width:8px;height:80%"></div>
+        <div style="background:#89b4fa;width:8px;height:40%"></div>
+        <div style="background:#89b4fa;width:8px;height:90%"></div>
+        <div style="background:#89b4fa;width:8px;height:70%"></div>
+        <div style="background:#89b4fa;width:8px;height:100%"></div>
+        <div style="background:#89b4fa;width:8px;height:55%"></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>Web Dashboard (Recommended)</h3>
+      <p>Bun HTTP server + React with HMR. Live-updates via WebSocket. Charts, stats cards, session history in browser. Most visual option.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="hybrid" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#0f172a;padding:16px;border-radius:8px;min-height:120px;display:flex;gap:12px">
+      <div style="flex:1;background:#1e293b;border-radius:6px;padding:8px;font-family:monospace;font-size:11px">
+        <div style="color:#94a3b8">$ bun monitor</div>
+        <div style="color:#34d399;margin-top:4px">✓ Watching session</div>
+        <div style="color:#94a3b8;margin-top:2px">→ localhost:3000</div>
+        <div style="margin-top:8px;color:#f8fafc">Tokens: 42k/8k</div>
+        <div style="color:#fbbf24">Cost: $0.24</div>
+      </div>
+      <div style="flex:2;background:#1e293b;border-radius:6px;padding:8px">
+        <div style="font-size:10px;color:#94a3b8;margin-bottom:6px">LIVE DASHBOARD</div>
+        <div style="display:flex;gap:4px">
+          <div style="background:#1d4ed8;border-radius:4px;padding:4px 8px;font-size:10px;color:#93c5fd">Session</div>
+          <div style="background:#065f46;border-radius:4px;padding:4px 8px;font-size:10px;color:#6ee7b7">Tokens</div>
+          <div style="background:#7c2d12;border-radius:4px;padding:4px 8px;font-size:10px;color:#fdba74">Cost</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>CLI + Web Combo</h3>
+      <p>Terminal shows a compact summary; full dashboard opens in browser. Best for when you want quick glances + deep dives.</p>
+    </div>
+  </div>
+</div>

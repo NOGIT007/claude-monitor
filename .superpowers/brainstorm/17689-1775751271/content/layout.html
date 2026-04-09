@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard Layout Preview</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #181825; color: #cdd6f4; font-family: system-ui, sans-serif; padding: 16px; font-size: 13px; }
+
+  .top-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: #1e1e2e; border: 1px solid #313244; border-radius: 8px;
+    padding: 10px 16px; margin-bottom: 12px;
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #a6e3a1; box-shadow: 0 0 8px #a6e3a1; display: inline-block; margin-right: 8px; }
+  .mono { font-family: monospace; color: #6c7086; font-size: 11px; }
+
+  .sessions-section { margin-bottom: 12px; }
+  .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em; color: #6c7086; margin-bottom: 8px; }
+
+  .session-card {
+    background: #1e1e2e; border: 1px solid #313244; border-radius: 8px; padding: 12px;
+    margin-bottom: 8px;
+  }
+  .session-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .session-id { font-family: monospace; font-size: 11px; color: #89b4fa; }
+  .session-time { font-size: 10px; color: #6c7086; }
+  .session-project { font-size: 11px; color: #cba6f7; margin-bottom: 8px; }
+
+  .token-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .token-cell { background: #313244; border-radius: 6px; padding: 7px 10px; }
+  .token-label { font-size: 9px; text-transform: uppercase; letter-spacing: .05em; color: #6c7086; }
+  .token-value { font-size: 17px; font-weight: 700; margin-top: 2px; }
+  .blue { color: #89b4fa; }
+  .green { color: #a6e3a1; }
+  .purple { color: #cba6f7; }
+  .yellow { color: #f9e2af; }
+  .peach { color: #fab387; }
+
+  .progress-bar { height: 3px; background: #313244; border-radius: 2px; margin-top: 8px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #89b4fa, #cba6f7); border-radius: 2px; }
+
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .chart-card { background: #1e1e2e; border: 1px solid #313244; border-radius: 8px; padding: 12px; }
+
+  .bar-chart { display: flex; align-items: flex-end; gap: 4px; height: 70px; margin-top: 10px; }
+  .bar { border-radius: 3px 3px 0 0; flex: 1; }
+
+  .period-tabs { display: flex; gap: 4px; margin-bottom: 10px; }
+  .tab { padding: 3px 10px; border-radius: 4px; font-size: 10px; cursor: pointer; }
+  .tab.active { background: #89b4fa; color: #1e1e2e; font-weight: 600; }
+  .tab.inactive { background: #313244; color: #6c7086; }
+
+  .summary-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 12px; }
+  .summary-card { background: #1e1e2e; border: 1px solid #313244; border-radius: 8px; padding: 10px 14px; }
+  .summary-label { font-size: 9px; text-transform: uppercase; letter-spacing: .06em; color: #6c7086; }
+  .summary-value { font-size: 22px; font-weight: 700; margin-top: 3px; }
+  .summary-sub { font-size: 10px; color: #6c7086; margin-top: 2px; }
+
+  .annotation { background: #313244; border-left: 2px solid #cba6f7; border-radius: 0 6px 6px 0; padding: 6px 10px; font-size: 10px; color: #6c7086; margin-top: 6px; }
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="top-bar">
+  <div><span class="dot"></span><span style="font-weight:600">claude monitor</span> <span class="mono" style="margin-left:8px">2 sessions active</span></div>
+  <div class="mono">bun 1.x · DuckDB · HMR ✓</div>
+</div>
+
+<!-- LIVE SESSIONS -->
+<div class="sessions-section">
+  <div class="section-label">Live Sessions</div>
+
+  <!-- Session 1 -->
+  <div class="session-card">
+    <div class="session-header">
+      <span class="session-id">c8c3e586</span>
+      <span class="session-time">⏱ 42 min · claude-sonnet-4-6</span>
+    </div>
+    <div class="session-project">~/code/claude-monitoring</div>
+    <div class="token-grid">
+      <div class="token-cell">
+        <div class="token-label">Input</div>
+        <div class="token-value blue">42.1k</div>
+      </div>
+      <div class="token-cell">
+        <div class="token-label">Output</div>
+        <div class="token-value green">8.4k</div>
+      </div>
+      <div class="token-cell">
+        <div class="token-label">Cache hit</div>
+        <div class="token-value purple">180k</div>
+      </div>
+      <div class="token-cell">
+        <div class="token-label">Est. cost</div>
+        <div class="token-value yellow">$0.24</div>
+      </div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:35%"></div></div>
+  </div>
+
+  <!-- Session 2 -->
+  <div class="session-card" style="opacity:.75">
+    <div class="session-header">
+      <span class="session-id">f4a2b901</span>
+      <span class="session-time">⏱ 8 min · claude-sonnet-4-6</span>
+    </div>
+    <div class="session-project">~/code/wiki</div>
+    <div class="token-grid">
+      <div class="token-cell">
+        <div class="token-label">Input</div>
+        <div class="token-value blue">12.3k</div>
+      </div>
+      <div class="token-cell">
+        <div class="token-label">Output</div>
+        <div class="token-value green">2.1k</div>
+      </div>
+      <div class="token-cell">
+        <div class="token-label">Cache hit</div>
+        <div class="token-value purple">44k</div>
+      </div>
+      <div class="token-cell">
+        <div class="token-label">Est. cost</div>
+        <div class="token-value yellow">$0.06</div>
+      </div>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" style="width:10%"></div></div>
+  </div>
+</div>
+
+<!-- PERIOD SUMMARY ROW -->
+<div class="section-label">Usage Summary</div>
+<div class="period-tabs" style="margin-bottom:10px">
+  <div class="tab active">Today</div>
+  <div class="tab inactive">Week</div>
+  <div class="tab inactive">Month</div>
+</div>
+<div class="summary-grid">
+  <div class="summary-card">
+    <div class="summary-label">Total Tokens</div>
+    <div class="summary-value blue">1.2M</div>
+    <div class="summary-sub">↑ 18% vs last week</div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-label">Est. Cost</div>
+    <div class="summary-value yellow">$3.40</div>
+    <div class="summary-sub">5 sessions · 3h 12m</div>
+  </div>
+  <div class="summary-card">
+    <div class="summary-label">Cache Savings</div>
+    <div class="summary-value green">$1.80</div>
+    <div class="summary-sub">34% cache hit rate</div>
+  </div>
+</div>
+
+<!-- CHARTS -->
+<div class="stats-grid">
+  <div class="chart-card">
+    <div class="section-label">Daily Token Usage</div>
+    <div class="bar-chart">
+      <div class="bar" style="height:40%;background:#45475a"></div>
+      <div class="bar" style="height:60%;background:#45475a"></div>
+      <div class="bar" style="height:35%;background:#45475a"></div>
+      <div class="bar" style="height:80%;background:#45475a"></div>
+      <div class="bar" style="height:55%;background:#89b4fa"></div>
+      <div class="bar" style="height:90%;background:#89b4fa"></div>
+      <div class="bar" style="height:100%;background:#cba6f7"></div>
+    </div>
+    <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:9px;color:#6c7086">
+      <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Today</span>
+    </div>
+  </div>
+  <div class="chart-card">
+    <div class="section-label">Token Breakdown</div>
+    <div style="margin-top:10px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="color:#89b4fa;font-size:11px">■ Input</span>
+        <span style="font-size:11px">42%</span>
+      </div>
+      <div style="height:6px;background:#313244;border-radius:3px;margin-bottom:8px;overflow:hidden"><div style="height:100%;width:42%;background:#89b4fa;border-radius:3px"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="color:#cba6f7;font-size:11px">■ Cache Read</span>
+        <span style="font-size:11px">48%</span>
+      </div>
+      <div style="height:6px;background:#313244;border-radius:3px;margin-bottom:8px;overflow:hidden"><div style="height:100%;width:48%;background:#cba6f7;border-radius:3px"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="color:#a6e3a1;font-size:11px">■ Output</span>
+        <span style="font-size:11px">8%</span>
+      </div>
+      <div style="height:6px;background:#313244;border-radius:3px;margin-bottom:8px;overflow:hidden"><div style="height:100%;width:8%;background:#a6e3a1;border-radius:3px"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-bottom:5px">
+        <span style="color:#f9e2af;font-size:11px">■ Cache Write</span>
+        <span style="font-size:11px">2%</span>
+      </div>
+      <div style="height:6px;background:#313244;border-radius:3px;overflow:hidden"><div style="height:100%;width:2%;background:#f9e2af;border-radius:3px"></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="annotation">↑ All data live from ~/.claude/projects/**/*.jsonl · persisted to DuckDB · updates via WebSocket</div>
+
+</body>
+</html>
