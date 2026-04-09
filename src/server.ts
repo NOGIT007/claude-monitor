@@ -10,7 +10,42 @@ const watcher = startWatcher({ db });
 
 const srcDir = import.meta.dir;
 const clientDir = resolve(srcDir, "client");
-const indexHtml = await Bun.file(join(srcDir, "index.html")).text();
+
+// Build the React client bundle in-memory
+const buildResult = await Bun.build({
+  entrypoints: [join(clientDir, "main.tsx")],
+  minify: false,
+  target: "browser",
+  define: {
+    "process.env.NODE_ENV": JSON.stringify("development"),
+  },
+});
+
+const clientBundle = buildResult.outputs[0]
+  ? await buildResult.outputs[0].text()
+  : "";
+
+if (!clientBundle) {
+  console.error("Client build failed:", buildResult.logs);
+}
+
+// Read CSS
+const themeCSS = await Bun.file(join(clientDir, "theme.css")).text();
+
+// Inline everything into a single HTML response
+const indexHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Claude Monitor</title>
+  <style>${themeCSS}</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">${clientBundle}</script>
+</body>
+</html>`;
 
 const server = Bun.serve({
   port,
@@ -25,16 +60,7 @@ const server = Bun.serve({
       return new Response("WebSocket upgrade failed", { status: 400 });
     }
 
-    // Serve static files from src/client/
-    if (url.pathname.startsWith("/client/")) {
-      const filePath = resolve(srcDir, url.pathname.slice(1));
-      if (!filePath.startsWith(clientDir)) {
-        return new Response("Forbidden", { status: 403 });
-      }
-      return new Response(Bun.file(filePath));
-    }
-
-    // SPA fallback — serve index.html
+    // SPA fallback — serve index.html with inlined bundle
     return new Response(indexHtml, {
       headers: { "Content-Type": "text/html" },
     });

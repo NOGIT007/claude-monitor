@@ -9,11 +9,36 @@ const tmpDir = mkdtempSync(join(tmpdir(), "claude-monitor-test-"));
 const dbPath = join(tmpDir, "test.db");
 const db = initDb(dbPath);
 
-const srcDir = join(import.meta.dir);
-const indexHtml = await Bun.file(join(srcDir, "index.html")).text();
+const srcDir = import.meta.dir;
+const clientDir = join(srcDir, "client");
+
+// Build client bundle for test server
+const buildResult = await Bun.build({
+  entrypoints: [join(clientDir, "main.tsx")],
+  minify: false,
+  target: "browser",
+  define: { "process.env.NODE_ENV": JSON.stringify("test") },
+});
+const clientBundle = buildResult.outputs[0]
+  ? await buildResult.outputs[0].text()
+  : "";
+const themeCSS = await Bun.file(join(clientDir, "theme.css")).text();
+
+const indexHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Claude Monitor</title>
+  <style>${themeCSS}</style>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">${clientBundle}</script>
+</body>
+</html>`;
 
 const server = Bun.serve({
-  port: 0, // random available port
+  port: 0,
   fetch(req, server) {
     const apiResponse = handleApiRequest(req, db);
     if (apiResponse) return apiResponse;
@@ -21,14 +46,8 @@ const server = Bun.serve({
     const url = new URL(req.url);
 
     if (url.pathname === "/ws") {
-      const upgraded = server.upgrade(req);
-      if (upgraded) return undefined as unknown as Response;
+      if (server.upgrade(req)) return;
       return new Response("WebSocket upgrade failed", { status: 400 });
-    }
-
-    if (url.pathname.startsWith("/client/")) {
-      const filePath = join(srcDir, url.pathname);
-      return new Response(Bun.file(filePath));
     }
 
     return new Response(indexHtml, {
@@ -51,11 +70,12 @@ afterAll(() => {
 });
 
 describe("server", () => {
-  test("GET / serves index.html", async () => {
+  test("GET / serves index.html with bundled React app", async () => {
     const res = await fetch(`${base}/`);
     expect(res.status).toBe(200);
     const text = await res.text();
     expect(text).toContain("Claude Monitor");
+    expect(text).toContain("--ctp-base");
     expect(res.headers.get("content-type")).toContain("text/html");
   });
 
@@ -84,12 +104,5 @@ describe("server", () => {
     expect(res.status).toBe(200);
     const text = await res.text();
     expect(text).toContain("Claude Monitor");
-  });
-
-  test("GET /client/theme.css serves CSS file", async () => {
-    const res = await fetch(`${base}/client/theme.css`);
-    expect(res.status).toBe(200);
-    const text = await res.text();
-    expect(text.length).toBeGreaterThan(0);
   });
 });
