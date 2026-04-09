@@ -1,17 +1,15 @@
 import type { ActiveSession } from "../types";
 import { formatNumber, formatCost, formatElapsed } from "../format";
 
-const pulseKeyframes = `
+// Inject keyframes once (idempotent for HMR)
+if (typeof document !== "undefined" && !document.getElementById("pulse-glow-style")) {
+  const style = document.createElement("style");
+  style.id = "pulse-glow-style";
+  style.textContent = `
 @keyframes pulse-glow {
   0%, 100% { box-shadow: 0 0 0 0 rgba(166, 227, 161, 0.15); }
   50% { box-shadow: 0 0 12px 2px rgba(166, 227, 161, 0.25); }
-}
-`;
-
-// Inject keyframes once
-if (typeof document !== "undefined") {
-  const style = document.createElement("style");
-  style.textContent = pulseKeyframes;
+}`;
   document.head.appendChild(style);
 }
 

@@ -21,7 +21,20 @@ export function handleApiRequest(req: Request, db: Database): Response | null {
   }
 
   if (pathname === "/api/sessions") {
-    return json(getActiveSessions(db));
+    const sessions = getActiveSessions(db).map((s) => ({
+      sessionId: s.session_id,
+      projectPath: s.project_path,
+      model: s.model,
+      elapsedMs: Date.now() - new Date(s.started_at).getTime(),
+      totals: {
+        input: s.total_input,
+        output: s.total_output,
+        cacheRead: s.total_cache_read,
+        cacheWrite: s.total_cache_creation,
+        costUsd: s.total_cost,
+      },
+    }));
+    return json(sessions);
   }
 
   if (pathname.startsWith("/api/stats/")) {

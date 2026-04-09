@@ -8,6 +8,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import type { DayEntry } from "../types";
+import { formatNumber } from "../format";
 
 interface Props {
   history: DayEntry[];
@@ -54,7 +55,7 @@ export function TokenChart({ history }: Props) {
             color: "#cdd6f4",
           }}
           formatter={(value: number, name: string) => [
-            new Intl.NumberFormat("en-US").format(value),
+            formatNumber(value),
             name,
           ]}
         />

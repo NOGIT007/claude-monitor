@@ -74,10 +74,13 @@ describe("watcher", () => {
     // Append a valid JSONL entry
     appendFileSync(jsonlFile, JSON.stringify(validEntry) + "\n");
 
-    // fs.watch is async; wait a bit for the event to fire
-    await new Promise((resolve) => setTimeout(resolve, 300));
-
-    const sessions = db.query("SELECT * FROM sessions").all() as any[];
+    // fs.watch is async; poll until the event fires
+    let sessions: any[] = [];
+    for (let i = 0; i < 10; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+      sessions = db.query("SELECT * FROM sessions").all() as any[];
+      if (sessions.length > 0) break;
+    }
     expect(sessions.length).toBeGreaterThanOrEqual(1);
     expect(sessions[0].session_id).toBe("watcher-test-session");
 

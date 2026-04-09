@@ -83,6 +83,33 @@ export interface ActiveSession {
   total_cost: number;
 }
 
+export function getSessionsByIds(
+  db: Database,
+  sessionIds: string[],
+): ActiveSession[] {
+  if (sessionIds.length === 0) return [];
+  const placeholders = sessionIds.map(() => "?").join(",");
+  return db
+    .query(
+      `SELECT
+         s.session_id,
+         s.project_path,
+         s.model,
+         s.started_at,
+         s.last_seen_at,
+         COALESCE(SUM(t.input_tokens), 0)          AS total_input,
+         COALESCE(SUM(t.output_tokens), 0)         AS total_output,
+         COALESCE(SUM(t.cache_read_tokens), 0)     AS total_cache_read,
+         COALESCE(SUM(t.cache_creation_tokens), 0) AS total_cache_creation,
+         COALESCE(SUM(t.cost_usd), 0)              AS total_cost
+       FROM sessions s
+       LEFT JOIN token_usage t ON t.session_id = s.session_id
+       WHERE s.session_id IN (${placeholders})
+       GROUP BY s.session_id`,
+    )
+    .all(...sessionIds) as ActiveSession[];
+}
+
 export function getActiveSessions(
   db: Database,
   withinMinutes = 30,
@@ -122,12 +149,16 @@ export function getStats(
   db: Database,
   period: "today" | "week" | "month",
 ): PeriodStats {
-  const cutoff =
-    period === "today"
-      ? "datetime('now', 'start of day')"
-      : period === "week"
-        ? "datetime('now', '-7 days')"
-        : "datetime('now', '-30 days')";
+  // Compute cutoff in JS so the SQL is a static prepared statement
+  const now = new Date();
+  let cutoff: string;
+  if (period === "today") {
+    cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  } else if (period === "week") {
+    cutoff = new Date(now.getTime() - 7 * 86400000).toISOString();
+  } else {
+    cutoff = new Date(now.getTime() - 30 * 86400000).toISOString();
+  }
 
   const row = db
     .query(
@@ -139,9 +170,9 @@ export function getStats(
          COALESCE(SUM(t.cost_usd), 0)              AS totalCost,
          COUNT(DISTINCT t.session_id)               AS sessionCount
        FROM token_usage t
-       WHERE t.timestamp >= ${cutoff}`,
+       WHERE t.timestamp >= ?`,
     )
-    .get() as PeriodStats;
+    .get(cutoff) as PeriodStats;
 
   return row;
 }

@@ -5,7 +5,7 @@ import type { Database } from "bun:sqlite";
 import type { FSWatcher } from "fs";
 import { processBuffer } from "./ingest";
 import { broadcastSessionUpdate } from "./ws";
-import { getActiveSessions } from "./db";
+import { getSessionsByIds } from "./db";
 
 export interface WatcherOptions {
   db: Database;
@@ -78,24 +78,22 @@ function handleFileChange(
   const updates = processBuffer(db, newData);
   if (updates.length === 0) return;
 
-  const sessionIds = new Set(updates.map((u) => u.sessionId));
-  const activeSessions = getActiveSessions(db, 60 * 24 * 365);
+  const sessionIds = [...new Set(updates.map((u) => u.sessionId))];
+  const sessions = getSessionsByIds(db, sessionIds);
 
-  for (const active of activeSessions) {
-    if (!sessionIds.has(active.session_id)) continue;
-
+  for (const s of sessions) {
     broadcastSessionUpdate({
-      sessionId: active.session_id,
-      projectPath: active.project_path,
-      model: active.model,
-      startedAt: active.started_at,
-      lastSeenAt: active.last_seen_at,
+      sessionId: s.session_id,
+      projectPath: s.project_path,
+      model: s.model,
+      startedAt: s.started_at,
+      lastSeenAt: s.last_seen_at,
       totals: {
-        input: active.total_input,
-        output: active.total_output,
-        cacheRead: active.total_cache_read,
-        cacheWrite: active.total_cache_creation,
-        costUsd: active.total_cost,
+        input: s.total_input,
+        output: s.total_output,
+        cacheRead: s.total_cache_read,
+        cacheWrite: s.total_cache_creation,
+        costUsd: s.total_cost,
       },
     });
   }

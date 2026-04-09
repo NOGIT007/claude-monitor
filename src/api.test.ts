@@ -52,11 +52,11 @@ describe("api", () => {
       expect(Array.isArray(data)).toBe(true);
       expect(data.length).toBe(2);
 
-      const sess1 = data.find((s: any) => s.session_id === "sess-1");
+      const sess1 = data.find((s: any) => s.sessionId === "sess-1");
       expect(sess1).toBeDefined();
-      expect(sess1.total_input).toBe(300);
-      expect(sess1.total_output).toBe(150);
-      expect(sess1.total_cost).toBeCloseTo(0.15);
+      expect(sess1.totals.input).toBe(300);
+      expect(sess1.totals.output).toBe(150);
+      expect(sess1.totals.costUsd).toBeCloseTo(0.15);
     });
   });
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { PeriodStats } from "../types";
 import { SummaryCards } from "./SummaryCards";
 
@@ -18,6 +18,8 @@ export function StatsTabs({ onStatsChange }: Props) {
   const [active, setActive] = useState<Period>("today");
   const [stats, setStats] = useState<PeriodStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const onStatsChangeRef = useRef(onStatsChange);
+  onStatsChangeRef.current = onStatsChange;
 
   useEffect(() => {
     setLoading(true);
@@ -25,11 +27,11 @@ export function StatsTabs({ onStatsChange }: Props) {
       .then((r) => r.json())
       .then((data: PeriodStats) => {
         setStats(data);
-        onStatsChange(data);
+        onStatsChangeRef.current(data);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [active, onStatsChange]);
+  }, [active]);
 
   return (
     <div>

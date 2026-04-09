@@ -2,13 +2,14 @@ import { initDb } from "./db";
 import { startWatcher } from "./watcher";
 import { handleApiRequest } from "./api";
 import { handleWsOpen, handleWsClose, handleWsMessage } from "./ws";
-import { join } from "path";
+import { join, resolve } from "path";
 
 const port = parseInt(process.env.PORT || "3000", 10);
 const db = initDb();
 const watcher = startWatcher({ db });
 
-const srcDir = join(import.meta.dir);
+const srcDir = import.meta.dir;
+const clientDir = resolve(srcDir, "client");
 const indexHtml = await Bun.file(join(srcDir, "index.html")).text();
 
 const server = Bun.serve({
@@ -20,14 +21,16 @@ const server = Bun.serve({
     const url = new URL(req.url);
 
     if (url.pathname === "/ws") {
-      const upgraded = server.upgrade(req);
-      if (upgraded) return undefined as unknown as Response;
+      if (server.upgrade(req)) return;
       return new Response("WebSocket upgrade failed", { status: 400 });
     }
 
     // Serve static files from src/client/
     if (url.pathname.startsWith("/client/")) {
-      const filePath = join(srcDir, url.pathname);
+      const filePath = resolve(srcDir, url.pathname.slice(1));
+      if (!filePath.startsWith(clientDir)) {
+        return new Response("Forbidden", { status: 403 });
+      }
       return new Response(Bun.file(filePath));
     }
 
