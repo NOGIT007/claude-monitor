@@ -29,21 +29,23 @@ if (!clientBundle) {
   console.error("Client build failed:", buildResult.logs);
 }
 
-// Read CSS
+// Read CSS and favicon
 const themeCSS = await Bun.file(join(clientDir, "theme.css")).text();
+const favicon = await Bun.file(join(srcDir, "favicon.svg")).text();
 
-// Inline everything into a single HTML response
+// Serve bundle and CSS as separate files, reference from HTML
 const indexHtml = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Claude Monitor</title>
-  <style>${themeCSS}</style>
+  <link rel="icon" type="image/svg+xml" href="/_assets/favicon.svg" />
+  <link rel="stylesheet" href="/_assets/theme.css" />
 </head>
 <body>
   <div id="root"></div>
-  <script type="module">${clientBundle}</script>
+  <script type="module" src="/_assets/bundle.js"></script>
 </body>
 </html>`;
 
@@ -60,7 +62,24 @@ const server = Bun.serve({
       return new Response("WebSocket upgrade failed", { status: 400 });
     }
 
-    // SPA fallback — serve index.html with inlined bundle
+    // Serve built assets
+    if (url.pathname === "/_assets/bundle.js") {
+      return new Response(clientBundle, {
+        headers: { "Content-Type": "application/javascript" },
+      });
+    }
+    if (url.pathname === "/_assets/favicon.svg" || url.pathname === "/favicon.ico") {
+      return new Response(favicon, {
+        headers: { "Content-Type": "image/svg+xml" },
+      });
+    }
+    if (url.pathname === "/_assets/theme.css") {
+      return new Response(themeCSS, {
+        headers: { "Content-Type": "text/css" },
+      });
+    }
+
+    // SPA fallback
     return new Response(indexHtml, {
       headers: { "Content-Type": "text/html" },
     });

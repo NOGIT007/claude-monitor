@@ -29,11 +29,11 @@ const indexHtml = `<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <title>Claude Monitor</title>
-  <style>${themeCSS}</style>
+  <link rel="stylesheet" href="/_assets/theme.css" />
 </head>
 <body>
   <div id="root"></div>
-  <script type="module">${clientBundle}</script>
+  <script type="module" src="/_assets/bundle.js"></script>
 </body>
 </html>`;
 
@@ -48,6 +48,17 @@ const server = Bun.serve({
     if (url.pathname === "/ws") {
       if (server.upgrade(req)) return;
       return new Response("WebSocket upgrade failed", { status: 400 });
+    }
+
+    if (url.pathname === "/_assets/bundle.js") {
+      return new Response(clientBundle, {
+        headers: { "Content-Type": "application/javascript" },
+      });
+    }
+    if (url.pathname === "/_assets/theme.css") {
+      return new Response(themeCSS, {
+        headers: { "Content-Type": "text/css" },
+      });
     }
 
     return new Response(indexHtml, {
@@ -75,7 +86,7 @@ describe("server", () => {
     expect(res.status).toBe(200);
     const text = await res.text();
     expect(text).toContain("Claude Monitor");
-    expect(text).toContain("--ctp-base");
+    expect(text).toContain("/_assets/bundle.js");
     expect(res.headers.get("content-type")).toContain("text/html");
   });
 
