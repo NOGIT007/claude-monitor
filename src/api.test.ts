@@ -130,6 +130,128 @@ describe("api", () => {
     });
   });
 
+  describe("GET /api/stats/projects", () => {
+    it("returns per-project stats with default period", async () => {
+      const res = handleApiRequest(makeRequest("/api/stats/projects"), db);
+      expect(res).not.toBeNull();
+      expect(res!.status).toBe(200);
+
+      const data = await res!.json();
+      expect(Array.isArray(data)).toBe(true);
+      expect(data.length).toBe(2);
+      expect(data[0].projectPath).toBeDefined();
+      expect(data[0].totalTokens).toBeGreaterThan(0);
+    });
+
+    it("accepts period query param", async () => {
+      const res = handleApiRequest(makeRequest("/api/stats/projects?period=week"), db);
+      expect(res!.status).toBe(200);
+      const data = await res!.json();
+      expect(data.length).toBe(2);
+    });
+
+    it("returns 400 for invalid period", async () => {
+      const res = handleApiRequest(makeRequest("/api/stats/projects?period=year"), db);
+      expect(res!.status).toBe(400);
+    });
+  });
+
+  describe("GET /api/stats/models", () => {
+    it("returns per-model stats", async () => {
+      const res = handleApiRequest(makeRequest("/api/stats/models"), db);
+      expect(res).not.toBeNull();
+      expect(res!.status).toBe(200);
+
+      const data = await res!.json();
+      expect(Array.isArray(data)).toBe(true);
+      expect(data.length).toBe(2);
+      const opus = data.find((m: any) => m.model === "opus-4");
+      expect(opus).toBeDefined();
+      expect(opus.totalInput).toBe(300);
+    });
+  });
+
+  describe("GET /api/stats/peak-hours", () => {
+    it("returns hourly breakdown with default days", async () => {
+      const res = handleApiRequest(makeRequest("/api/stats/peak-hours"), db);
+      expect(res).not.toBeNull();
+      expect(res!.status).toBe(200);
+
+      const data = await res!.json();
+      expect(Array.isArray(data)).toBe(true);
+      expect(data.length).toBeGreaterThanOrEqual(1);
+      expect(typeof data[0].hour).toBe("number");
+    });
+
+    it("accepts days query param", async () => {
+      const res = handleApiRequest(makeRequest("/api/stats/peak-hours?days=7"), db);
+      expect(res!.status).toBe(200);
+    });
+
+    it("returns 400 for invalid days", async () => {
+      const res = handleApiRequest(makeRequest("/api/stats/peak-hours?days=abc"), db);
+      expect(res!.status).toBe(400);
+    });
+  });
+
+  describe("GET /api/stats/sessions-summary", () => {
+    it("returns session summary", async () => {
+      const res = handleApiRequest(makeRequest("/api/stats/sessions-summary"), db);
+      expect(res).not.toBeNull();
+      expect(res!.status).toBe(200);
+
+      const data = await res!.json();
+      expect(data.totalSessions).toBeGreaterThanOrEqual(1);
+      expect(typeof data.avgDurationMs).toBe("number");
+      expect(typeof data.avgCostPerSession).toBe("number");
+    });
+  });
+
+  describe("GET /api/stats/comparison", () => {
+    it("returns current and previous period", async () => {
+      const res = handleApiRequest(makeRequest("/api/stats/comparison"), db);
+      expect(res).not.toBeNull();
+      expect(res!.status).toBe(200);
+
+      const data = await res!.json();
+      expect(data.current).toBeDefined();
+      expect(data.previous).toBeDefined();
+      expect(data.current.totalInput).toBe(450);
+    });
+  });
+
+  describe("GET /api/history/cost", () => {
+    it("returns daily cost entries", async () => {
+      const res = handleApiRequest(makeRequest("/api/history/cost"), db);
+      expect(res).not.toBeNull();
+      expect(res!.status).toBe(200);
+
+      const data = await res!.json();
+      expect(Array.isArray(data)).toBe(true);
+      expect(data.length).toBeGreaterThanOrEqual(1);
+      expect(data[0].cost).toBeGreaterThan(0);
+    });
+
+    it("accepts days query param", async () => {
+      const res = handleApiRequest(makeRequest("/api/history/cost?days=7"), db);
+      expect(res!.status).toBe(200);
+    });
+  });
+
+  describe("GET /api/history/cumulative", () => {
+    it("returns cumulative cost entries", async () => {
+      const res = handleApiRequest(makeRequest("/api/history/cumulative"), db);
+      expect(res).not.toBeNull();
+      expect(res!.status).toBe(200);
+
+      const data = await res!.json();
+      expect(Array.isArray(data)).toBe(true);
+      expect(data.length).toBeGreaterThanOrEqual(1);
+      expect(data[0].dailyCost).toBeGreaterThan(0);
+      expect(data[0].cumulativeCost).toBeGreaterThan(0);
+    });
+  });
+
   describe("unknown paths", () => {
     it("returns null for non-API paths", () => {
       expect(handleApiRequest(makeRequest("/"), db)).toBeNull();

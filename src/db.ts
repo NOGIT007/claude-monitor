@@ -145,20 +145,28 @@ export interface PeriodStats {
   sessionCount: number;
 }
 
+export function getCutoff(period: "today" | "week" | "month"): string {
+  const now = new Date();
+  if (period === "today") return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  if (period === "week") return new Date(now.getTime() - 7 * 86400000).toISOString();
+  return new Date(now.getTime() - 30 * 86400000).toISOString();
+}
+
+export function getPreviousCutoff(period: "today" | "week" | "month"): string {
+  const now = new Date();
+  if (period === "today") {
+    const yesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
+    return yesterday.toISOString();
+  }
+  if (period === "week") return new Date(now.getTime() - 14 * 86400000).toISOString();
+  return new Date(now.getTime() - 60 * 86400000).toISOString();
+}
+
 export function getStats(
   db: Database,
   period: "today" | "week" | "month",
 ): PeriodStats {
-  // Compute cutoff in JS so the SQL is a static prepared statement
-  const now = new Date();
-  let cutoff: string;
-  if (period === "today") {
-    cutoff = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
-  } else if (period === "week") {
-    cutoff = new Date(now.getTime() - 7 * 86400000).toISOString();
-  } else {
-    cutoff = new Date(now.getTime() - 30 * 86400000).toISOString();
-  }
+  const cutoff = getCutoff(period);
 
   const row = db
     .query(
@@ -175,6 +183,185 @@ export function getStats(
     .get(cutoff) as PeriodStats;
 
   return row;
+}
+
+export interface ProjectStats {
+  projectPath: string;
+  totalTokens: number;
+  totalCost: number;
+  sessionCount: number;
+}
+
+export function getProjectStats(
+  db: Database,
+  period: "today" | "week" | "month",
+): ProjectStats[] {
+  const cutoff = getCutoff(period);
+  return db
+    .query(
+      `SELECT
+         s.project_path AS projectPath,
+         COALESCE(SUM(t.input_tokens + t.output_tokens + t.cache_read_tokens + t.cache_creation_tokens), 0) AS totalTokens,
+         COALESCE(SUM(t.cost_usd), 0) AS totalCost,
+         COUNT(DISTINCT t.session_id) AS sessionCount
+       FROM token_usage t
+       JOIN sessions s ON s.session_id = t.session_id
+       WHERE t.timestamp >= ?
+       GROUP BY s.project_path
+       ORDER BY totalCost DESC`,
+    )
+    .all(cutoff) as ProjectStats[];
+}
+
+export interface ModelStats {
+  model: string;
+  totalInput: number;
+  totalOutput: number;
+  totalCacheRead: number;
+  totalCacheWrite: number;
+  totalCost: number;
+}
+
+export function getModelStats(
+  db: Database,
+  period: "today" | "week" | "month",
+): ModelStats[] {
+  const cutoff = getCutoff(period);
+  return db
+    .query(
+      `SELECT
+         s.model,
+         COALESCE(SUM(t.input_tokens), 0) AS totalInput,
+         COALESCE(SUM(t.output_tokens), 0) AS totalOutput,
+         COALESCE(SUM(t.cache_read_tokens), 0) AS totalCacheRead,
+         COALESCE(SUM(t.cache_creation_tokens), 0) AS totalCacheWrite,
+         COALESCE(SUM(t.cost_usd), 0) AS totalCost
+       FROM token_usage t
+       JOIN sessions s ON s.session_id = t.session_id
+       WHERE t.timestamp >= ?
+       GROUP BY s.model
+       ORDER BY totalCost DESC`,
+    )
+    .all(cutoff) as ModelStats[];
+}
+
+export interface HourStats {
+  hour: number;
+  totalTokens: number;
+  totalCost: number;
+}
+
+export function getPeakHours(db: Database, days: number): HourStats[] {
+  const cutoff = new Date(Date.now() - days * 86400000).toISOString();
+  return db
+    .query(
+      `SELECT
+         CAST(strftime('%H', t.timestamp) AS INTEGER) AS hour,
+         COALESCE(SUM(t.input_tokens + t.output_tokens), 0) AS totalTokens,
+         COALESCE(SUM(t.cost_usd), 0) AS totalCost
+       FROM token_usage t
+       WHERE t.timestamp >= ?
+       GROUP BY hour
+       ORDER BY hour`,
+    )
+    .all(cutoff) as HourStats[];
+}
+
+export interface SessionsSummary {
+  totalSessions: number;
+  avgDurationMs: number;
+  longestDurationMs: number;
+  avgCostPerSession: number;
+}
+
+export function getSessionsSummary(
+  db: Database,
+  period: "today" | "week" | "month",
+): SessionsSummary {
+  const cutoff = getCutoff(period);
+  const row = db
+    .query(
+      `SELECT
+         COUNT(*) AS totalSessions,
+         COALESCE(AVG((julianday(s.last_seen_at) - julianday(s.started_at)) * 86400000), 0) AS avgDurationMs,
+         COALESCE(MAX((julianday(s.last_seen_at) - julianday(s.started_at)) * 86400000), 0) AS longestDurationMs
+       FROM sessions s
+       WHERE s.started_at >= ?`,
+    )
+    .get(cutoff) as { totalSessions: number; avgDurationMs: number; longestDurationMs: number };
+
+  const stats = getStats(db, period);
+  const avgCostPerSession = stats.sessionCount > 0 ? stats.totalCost / stats.sessionCount : 0;
+
+  return {
+    totalSessions: row.totalSessions,
+    avgDurationMs: row.avgDurationMs,
+    longestDurationMs: row.longestDurationMs,
+    avgCostPerSession,
+  };
+}
+
+export interface Comparison {
+  current: PeriodStats;
+  previous: PeriodStats;
+}
+
+export function getComparison(
+  db: Database,
+  period: "today" | "week" | "month",
+): Comparison {
+  const current = getStats(db, period);
+
+  const prevCutoff = getPreviousCutoff(period);
+  const currCutoff = getCutoff(period);
+
+  const previous = db
+    .query(
+      `SELECT
+         COALESCE(SUM(t.input_tokens), 0)          AS totalInput,
+         COALESCE(SUM(t.output_tokens), 0)         AS totalOutput,
+         COALESCE(SUM(t.cache_read_tokens), 0)     AS totalCacheRead,
+         COALESCE(SUM(t.cache_creation_tokens), 0) AS totalCacheWrite,
+         COALESCE(SUM(t.cost_usd), 0)              AS totalCost,
+         COUNT(DISTINCT t.session_id)               AS sessionCount
+       FROM token_usage t
+       WHERE t.timestamp >= ? AND t.timestamp < ?`,
+    )
+    .get(prevCutoff, currCutoff) as PeriodStats;
+
+  return { current, previous };
+}
+
+export interface CostHistoryEntry {
+  date: string;
+  cost: number;
+}
+
+export function getCostHistory(db: Database, days: number): CostHistoryEntry[] {
+  return db
+    .query(
+      `SELECT date(t.timestamp) AS date, COALESCE(SUM(t.cost_usd), 0) AS cost
+       FROM token_usage t
+       WHERE t.timestamp >= datetime('now', '-' || ? || ' days')
+       GROUP BY date(t.timestamp)
+       ORDER BY date ASC`,
+    )
+    .all(days) as CostHistoryEntry[];
+}
+
+export interface CumulativeCostEntry {
+  date: string;
+  dailyCost: number;
+  cumulativeCost: number;
+}
+
+export function getCumulativeCost(db: Database, days: number): CumulativeCostEntry[] {
+  const costHistory = getCostHistory(db, days);
+  let cumulative = 0;
+  return costHistory.map(entry => {
+    cumulative += entry.cost;
+    return { date: entry.date, dailyCost: entry.cost, cumulativeCost: cumulative };
+  });
 }
 
 export interface DayEntry {
