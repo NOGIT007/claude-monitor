@@ -1,0 +1,25 @@
+{
+  "name": "claude-monitoring",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "bun run --hot src/server.ts",
+    "build": "bun build --compile ./src/server.ts --outfile ./claude-monitor",
+    "start": "./scripts/start.sh",
+    "stop": "./scripts/stop.sh",
+    "duckdb:ingest": "bun run scripts/duckdb-ingest.ts",
+    "duckdb:query": "./scripts/duckdb-query.sh",
+    "otel:ingest": "bun run scripts/otel-to-duckdb.ts",
+    "backfill": "bun run scripts/backfill.ts"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "recharts": "^2.15.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "bun-types": "^1.2.9"
+  }
+}
