@@ -1,6 +1,6 @@
 # Claude Monitor
 
-Real-time dashboard for tracking Claude Code usage, costs, and session activity. Built with Bun, React, SQLite, and DuckDB.
+Real-time dashboard for tracking Claude Code usage, costs, and session activity. Built with Bun, React, and SQLite.
 
 ## Features
 
@@ -14,7 +14,6 @@ Real-time dashboard for tracking Claude Code usage, costs, and session activity.
 - **Peak Hours** — Hourly usage heatmap
 - **Token History** — Daily token breakdown (input, output, cache read, cache write)
 - **OTEL Collector** — Built-in OTLP/HTTP endpoint for ingesting OpenTelemetry metrics, events, and traces
-- **DuckDB Analytics** — Historical session data with SQL query interface
 
 ## Quick Start
 
@@ -55,9 +54,6 @@ The monitor watches `~/.claude/projects/` for JSONL session logs written by Clau
 | `bun run stop` | Stop background process |
 | `bun run build` | Compile to standalone binary |
 | `bun run backfill` | Import historical data from JSONL logs |
-| `bun run duckdb:ingest` | Import session-meta + stats into DuckDB |
-| `bun run duckdb:query` | Quick DuckDB queries (`recent`, `models`, `projects`, `sql`) |
-| `bun run otel:ingest` | Load OTEL NDJSON files into DuckDB |
 
 ## Enable OpenTelemetry
 
@@ -79,25 +75,11 @@ Add to `~/.claude/settings.json` under `"env"`:
 
 Restart Claude Code sessions after adding these. The built-in collector on port 4318 will capture all telemetry.
 
-## DuckDB Queries
-
-```bash
-# Interactive DuckDB shell
-./scripts/duckdb-query.sh sql
-
-# Quick commands
-./scripts/duckdb-query.sh recent     # Last 10 sessions
-./scripts/duckdb-query.sh projects   # Project breakdown
-./scripts/duckdb-query.sh models     # Daily model mix
-./scripts/duckdb-query.sh hours      # Hourly pattern
-./scripts/duckdb-query.sh trend      # 14-day activity trend
-```
-
 ## Tech Stack
 
 - **Runtime**: [Bun](https://bun.sh)
 - **Frontend**: React 19 + Recharts
-- **Database**: SQLite (live data) + DuckDB (analytics)
+- **Database**: SQLite (WAL mode)
 - **Telemetry**: OpenTelemetry OTLP/HTTP
 
 ## License

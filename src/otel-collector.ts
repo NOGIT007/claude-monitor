@@ -1,6 +1,6 @@
 /**
  * Lightweight OTLP/HTTP JSON collector that ingests Claude Code telemetry
- * into DuckDB. Receives metrics, logs/events, and traces.
+ * into NDJSON files. Receives metrics, logs/events, and traces.
  *
  * Listens on port 4318 (OTLP HTTP default).
  */
