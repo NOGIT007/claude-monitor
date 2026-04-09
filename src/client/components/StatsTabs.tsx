@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import type { PeriodStats } from "../types";
+import type { PeriodStats, Comparison } from "../types";
 import { SummaryCards } from "./SummaryCards";
 
 type Period = "today" | "week" | "month";
@@ -12,25 +12,36 @@ const periods: { key: Period; label: string }[] = [
 
 interface Props {
   onStatsChange: (stats: PeriodStats) => void;
+  onPeriodChange?: (period: Period) => void;
 }
 
-export function StatsTabs({ onStatsChange }: Props) {
+export function StatsTabs({ onStatsChange, onPeriodChange }: Props) {
   const [active, setActive] = useState<Period>("today");
   const [stats, setStats] = useState<PeriodStats | null>(null);
+  const [comparison, setComparison] = useState<Comparison | null>(null);
   const [loading, setLoading] = useState(false);
   const onStatsChangeRef = useRef(onStatsChange);
   onStatsChangeRef.current = onStatsChange;
+  const onPeriodChangeRef = useRef(onPeriodChange);
+  onPeriodChangeRef.current = onPeriodChange;
 
   useEffect(() => {
     setLoading(true);
-    fetch(`/api/stats/${active}`)
-      .then((r) => r.json())
-      .then((data: PeriodStats) => {
-        setStats(data);
-        onStatsChangeRef.current(data);
+    Promise.all([
+      fetch(`/api/stats/${active}`).then((r) => r.json()),
+      fetch(`/api/stats/comparison?period=${active}`).then((r) => r.json()),
+    ])
+      .then(([statsData, compData]: [PeriodStats, Comparison]) => {
+        setStats(statsData);
+        setComparison(compData);
+        onStatsChangeRef.current(statsData);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+  }, [active]);
+
+  useEffect(() => {
+    onPeriodChangeRef.current?.(active);
   }, [active]);
 
   return (
@@ -61,7 +72,7 @@ export function StatsTabs({ onStatsChange }: Props) {
       {loading && !stats ? (
         <div style={{ color: "var(--ctp-subtext0)" }}>Loading...</div>
       ) : stats ? (
-        <SummaryCards stats={stats} />
+        <SummaryCards stats={stats} comparison={comparison} />
       ) : null}
     </div>
   );

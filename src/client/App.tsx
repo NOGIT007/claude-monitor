@@ -2,13 +2,22 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { ActiveSession, DayEntry, PeriodStats, WsMessage } from "./types";
 import { LiveSessions } from "./components/LiveSessions";
 import { StatsTabs } from "./components/StatsTabs";
+import { SessionStats } from "./components/SessionStats";
+import { EfficiencyMetrics } from "./components/EfficiencyMetrics";
+import { ProjectCosts } from "./components/ProjectCosts";
+import { ModelBreakdown } from "./components/ModelBreakdown";
+import { CostTrendChart } from "./components/CostTrendChart";
+import { PeakHours } from "./components/PeakHours";
 import { TokenChart } from "./components/TokenChart";
 import { BreakdownChart } from "./components/BreakdownChart";
+
+type Period = "today" | "week" | "month";
 
 export function App() {
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
   const [history, setHistory] = useState<DayEntry[]>([]);
   const [currentStats, setCurrentStats] = useState<PeriodStats | null>(null);
+  const [period, setPeriod] = useState<Period>("today");
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -53,19 +62,16 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    // Fetch initial sessions
     fetch("/api/sessions")
       .then((r) => r.json())
       .then((data: ActiveSession[]) => setSessions(data))
       .catch(() => {});
 
-    // Fetch history
     fetch("/api/history?days=30")
       .then((r) => r.json())
       .then((data: DayEntry[]) => setHistory(data))
       .catch(() => {});
 
-    // Connect WebSocket
     connectWs();
 
     return () => {
@@ -124,13 +130,71 @@ export function App() {
         <LiveSessions sessions={sessions} />
       </section>
 
-      {/* Stats */}
+      {/* Stats with comparison badges */}
       <section style={{ marginBottom: "2rem" }}>
         <h2 style={sectionTitle}>Usage Statistics</h2>
-        <StatsTabs onStatsChange={setCurrentStats} />
+        <StatsTabs onStatsChange={setCurrentStats} onPeriodChange={setPeriod} />
       </section>
 
-      {/* Charts */}
+      {/* Session Stats */}
+      <section style={{ marginBottom: "2rem" }}>
+        <h2 style={sectionTitle}>Session Metrics</h2>
+        <SessionStats period={period} />
+      </section>
+
+      {/* Efficiency */}
+      <section style={{ marginBottom: "2rem" }}>
+        <h2 style={sectionTitle}>Efficiency</h2>
+        <EfficiencyMetrics stats={currentStats} />
+      </section>
+
+      {/* Cost per Project + Model Breakdown */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "1.5rem",
+          marginBottom: "2rem",
+        }}
+      >
+        <section>
+          <h2 style={sectionTitle}>Cost per Project</h2>
+          <div className="card">
+            <ProjectCosts period={period} />
+          </div>
+        </section>
+        <section>
+          <h2 style={sectionTitle}>Model Breakdown</h2>
+          <div className="card">
+            <ModelBreakdown period={period} />
+          </div>
+        </section>
+      </div>
+
+      {/* Cost Trend + Peak Hours */}
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "1.5rem",
+          marginBottom: "2rem",
+        }}
+      >
+        <section>
+          <h2 style={sectionTitle}>Cost Trend</h2>
+          <div className="card">
+            <CostTrendChart />
+          </div>
+        </section>
+        <section>
+          <h2 style={sectionTitle}>Peak Hours</h2>
+          <div className="card">
+            <PeakHours />
+          </div>
+        </section>
+      </div>
+
+      {/* Token History + Breakdown */}
       <div
         style={{
           display: "grid",
