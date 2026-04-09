@@ -1,20 +1,35 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 PORT="${PORT:-3000}"
 PID_FILE="$HOME/.claude-monitor.pid"
 
-# Check if already running
-if [[ -f "$PID_FILE" ]] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-  echo "Claude Monitor is already running (PID: $(cat "$PID_FILE"))"
-  exit 0
+# Stop existing instance if running
+if [[ -f "$PID_FILE" ]]; then
+  OLD_PID=$(cat "$PID_FILE")
+  if kill -0 "$OLD_PID" 2>/dev/null; then
+    echo "Stopping existing Claude Monitor (PID: $OLD_PID)..."
+    kill "$OLD_PID"
+    # Wait for clean shutdown (up to 5s)
+    for i in $(seq 1 50); do
+      kill -0 "$OLD_PID" 2>/dev/null || break
+      sleep 0.1
+    done
+    # Force kill if still alive
+    if kill -0 "$OLD_PID" 2>/dev/null; then
+      kill -9 "$OLD_PID" 2>/dev/null || true
+    fi
+    echo "Stopped."
+  fi
+  rm -f "$PID_FILE"
 fi
 
 # Start the server
-if [[ -x "./claude-monitor" ]]; then
-  PORT="$PORT" ./claude-monitor &
+if [[ -x "$SCRIPT_DIR/claude-monitor" ]]; then
+  PORT="$PORT" "$SCRIPT_DIR/claude-monitor" &
 else
-  PORT="$PORT" bun run src/server.ts &
+  PORT="$PORT" bun run "$SCRIPT_DIR/src/server.ts" &
 fi
 
 PID=$!
