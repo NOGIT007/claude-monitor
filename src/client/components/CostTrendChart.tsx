@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import type { CumulativeCostEntry } from "../types";
 import { formatCost } from "../format";
+import { tooltipStyle, axisStyle, gridStyle } from "../chart-theme";
 
 export function CostTrendChart() {
   const [data, setData] = useState<CumulativeCostEntry[]>([]);
@@ -43,12 +44,12 @@ export function CostTrendChart() {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <ComposedChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#313244" />
+        <CartesianGrid {...gridStyle} />
         <XAxis
           dataKey="date"
-          tick={{ fill: "#a6adc8", fontSize: 12 }}
-          axisLine={{ stroke: "#313244" }}
-          tickLine={false}
+          tick={axisStyle.tick}
+          axisLine={axisStyle.axisLine}
+          tickLine={axisStyle.tickLine}
         />
         <YAxis
           yAxisId="left"
@@ -56,12 +57,13 @@ export function CostTrendChart() {
             value: "Daily ($)",
             angle: -90,
             position: "insideLeft",
-            fill: "#a6adc8",
-            fontSize: 12,
+            fill: "#7f849c",
+            fontSize: 11,
+            fontFamily: "'Outfit', system-ui",
           }}
-          tick={{ fill: "#a6adc8", fontSize: 12 }}
-          axisLine={{ stroke: "#313244" }}
-          tickLine={false}
+          tick={axisStyle.tick}
+          axisLine={axisStyle.axisLine}
+          tickLine={axisStyle.tickLine}
           tickFormatter={(v: number) => formatCost(v)}
         />
         <YAxis
@@ -71,21 +73,20 @@ export function CostTrendChart() {
             value: "Cumulative ($)",
             angle: 90,
             position: "insideRight",
-            fill: "#a6adc8",
-            fontSize: 12,
+            fill: "#7f849c",
+            fontSize: 11,
+            fontFamily: "'Outfit', system-ui",
           }}
-          tick={{ fill: "#a6adc8", fontSize: 12 }}
-          axisLine={{ stroke: "#313244" }}
-          tickLine={false}
+          tick={axisStyle.tick}
+          axisLine={axisStyle.axisLine}
+          tickLine={axisStyle.tickLine}
           tickFormatter={(v: number) => formatCost(v)}
         />
         <Tooltip
-          contentStyle={{
-            backgroundColor: "#181825",
-            border: "1px solid #313244",
-            borderRadius: 8,
-            color: "#cdd6f4",
-          }}
+          contentStyle={tooltipStyle.contentStyle}
+          labelStyle={tooltipStyle.labelStyle}
+          itemStyle={tooltipStyle.itemStyle}
+          cursor={tooltipStyle.cursor}
           formatter={(value: number, name: string) => [
             formatCost(value),
             name === "dailyCost" ? "Daily Cost" : "Cumulative Total",

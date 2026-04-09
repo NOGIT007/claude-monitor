@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import type { ModelStats } from "../types";
 import { formatCost } from "../format";
+import { tooltipStyle } from "../chart-theme";
 
 interface Props {
   period: "today" | "week" | "month";
@@ -66,12 +67,9 @@ export function ModelBreakdown({ period }: Props) {
             ))}
           </Pie>
           <Tooltip
-            contentStyle={{
-              background: "var(--ctp-surface0)",
-              border: "1px solid var(--ctp-surface1)",
-              borderRadius: 8,
-              color: "var(--ctp-text)",
-            }}
+            contentStyle={tooltipStyle.contentStyle}
+            labelStyle={tooltipStyle.labelStyle}
+            itemStyle={tooltipStyle.itemStyle}
             formatter={(value: number, name: string) => [formatCost(value), name]}
           />
         </PieChart>

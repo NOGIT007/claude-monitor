@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import type { DayEntry } from "../types";
 import { formatNumber } from "../format";
+import { tooltipStyle, axisStyle } from "../chart-theme";
 
 interface Props {
   history: DayEntry[];
@@ -35,32 +36,30 @@ export function TokenChart({ history }: Props) {
       <BarChart data={history}>
         <XAxis
           dataKey="date"
-          tick={{ fill: "#a6adc8", fontSize: 12 }}
-          axisLine={{ stroke: "#313244" }}
-          tickLine={false}
+          tick={axisStyle.tick}
+          axisLine={axisStyle.axisLine}
+          tickLine={axisStyle.tickLine}
         />
         <YAxis
-          tick={{ fill: "#a6adc8", fontSize: 12 }}
-          axisLine={{ stroke: "#313244" }}
-          tickLine={false}
+          tick={axisStyle.tick}
+          axisLine={axisStyle.axisLine}
+          tickLine={axisStyle.tickLine}
           tickFormatter={(v: number) =>
             v >= 1_000_000 ? `${(v / 1_000_000).toFixed(1)}M` : v >= 1_000 ? `${(v / 1_000).toFixed(0)}K` : String(v)
           }
         />
         <Tooltip
-          contentStyle={{
-            backgroundColor: "#181825",
-            border: "1px solid #313244",
-            borderRadius: 8,
-            color: "#cdd6f4",
-          }}
+          contentStyle={tooltipStyle.contentStyle}
+          labelStyle={tooltipStyle.labelStyle}
+          itemStyle={tooltipStyle.itemStyle}
+          cursor={tooltipStyle.cursor}
           formatter={(value: number, name: string) => [
             formatNumber(value),
             name,
           ]}
         />
         <Legend
-          wrapperStyle={{ color: "#cdd6f4", fontSize: 12 }}
+          wrapperStyle={{ color: "#cdd6f4", fontSize: 12, fontFamily: "'Outfit', system-ui" }}
         />
         <Bar dataKey="input" stackId="tokens" fill={COLORS.input} name="Input" radius={[0, 0, 0, 0]} />
         <Bar dataKey="output" stackId="tokens" fill={COLORS.output} name="Output" />

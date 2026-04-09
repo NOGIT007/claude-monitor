@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import type { ProjectStats } from "../types";
 import { formatCost, projectName } from "../format";
+import { tooltipStyle, axisStyle } from "../chart-theme";
 
 interface Props {
   period: "today" | "week" | "month";
@@ -45,25 +46,23 @@ export function ProjectCosts({ period }: Props) {
         <XAxis
           type="number"
           tickFormatter={(v: number) => `$${v.toFixed(2)}`}
-          tick={{ fill: "#a6adc8", fontSize: 12 }}
-          axisLine={{ stroke: "#313244" }}
-          tickLine={{ stroke: "#313244" }}
+          tick={axisStyle.tick}
+          axisLine={axisStyle.axisLine}
+          tickLine={axisStyle.tickLine}
         />
         <YAxis
           type="category"
           dataKey="name"
           width={120}
-          tick={{ fill: "#a6adc8", fontSize: 12 }}
-          axisLine={{ stroke: "#313244" }}
-          tickLine={{ stroke: "#313244" }}
+          tick={axisStyle.tick}
+          axisLine={axisStyle.axisLine}
+          tickLine={axisStyle.tickLine}
         />
         <Tooltip
-          contentStyle={{
-            background: "var(--ctp-surface0)",
-            border: "1px solid var(--ctp-surface1)",
-            borderRadius: 8,
-            color: "var(--ctp-text)",
-          }}
+          contentStyle={tooltipStyle.contentStyle}
+          labelStyle={tooltipStyle.labelStyle}
+          itemStyle={tooltipStyle.itemStyle}
+          cursor={tooltipStyle.cursor}
           formatter={(_value: number, _name: string, props: { payload: (typeof chartData)[number] }) => {
             const p = props.payload;
             return [

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import type { HourStats } from "../types";
 import { formatHour, formatNumber, formatCost, formatCompact } from "../format";
+import { tooltipStyle, axisStyle } from "../chart-theme";
 
 export function PeakHours() {
   const [data, setData] = useState<HourStats[]>([]);
@@ -28,33 +29,31 @@ export function PeakHours() {
       <BarChart data={data}>
         <XAxis
           dataKey="hour"
-          tick={{ fill: "#a6adc8", fontSize: 12 }}
-          axisLine={{ stroke: "#313244" }}
-          tickLine={false}
+          tick={axisStyle.tick}
+          axisLine={axisStyle.axisLine}
+          tickLine={axisStyle.tickLine}
           tickFormatter={(h: number) => formatHour(h)}
         />
         <YAxis
-          tick={{ fill: "#a6adc8", fontSize: 12 }}
-          axisLine={{ stroke: "#313244" }}
-          tickLine={false}
+          tick={axisStyle.tick}
+          axisLine={axisStyle.axisLine}
+          tickLine={axisStyle.tickLine}
           tickFormatter={(v: number) => formatCompact(v)}
         />
         <Tooltip
-          contentStyle={{
-            backgroundColor: "#181825",
-            border: "1px solid #313244",
-            borderRadius: 8,
-            color: "#cdd6f4",
-          }}
+          contentStyle={tooltipStyle.contentStyle}
+          labelStyle={tooltipStyle.labelStyle}
+          itemStyle={tooltipStyle.itemStyle}
+          cursor={tooltipStyle.cursor}
           formatter={(_value: number, _name: string, props: { payload: HourStats }) => {
             const entry = props.payload;
             return [
               `${formatNumber(entry.totalTokens)} tokens · ${formatCost(entry.totalCost)}`,
-              `${formatHour(entry.hour)} - ${formatHour((entry.hour + 1) % 24)}`,
+              `${formatHour(entry.hour)} – ${formatHour((entry.hour + 1) % 24)}`,
             ];
           }}
           labelFormatter={(hour: number) =>
-            `${formatHour(hour)} - ${formatHour((hour + 1) % 24)}`
+            `${formatHour(hour)} – ${formatHour((hour + 1) % 24)}`
           }
         />
         <Bar dataKey="totalTokens" name="Tokens" radius={[4, 4, 0, 0]}>
