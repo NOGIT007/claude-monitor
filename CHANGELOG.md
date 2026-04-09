@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-04-10
+
+### Removed
+- DuckDB dependency and all related scripts (duckdb-ingest, duckdb-query, otel-to-duckdb, snapshot-usage)
+- DuckDB references from README and package.json
+
+### Added
+- CLAUDE.md with project context for Claude Code
+
+### Changed
+- Simplified tech stack to SQLite-only (was SQLite + DuckDB)
+
 ## [0.1.0] - 2026-04-09
 
 ### Added
