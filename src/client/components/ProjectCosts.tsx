@@ -31,12 +31,26 @@ export function ProjectCosts({ period }: Props) {
     return <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>No project data</p>;
   }
 
-  const chartData = data.map((p) => ({
+  const TOP_N = 5;
+  const sorted = [...data].sort((a, b) => b.totalCost - a.totalCost);
+  const top = sorted.slice(0, TOP_N);
+  const rest = sorted.slice(TOP_N);
+
+  const chartData = top.map((p) => ({
     name: projectName(p.projectPath),
     cost: p.totalCost,
     tokens: p.totalTokens,
     sessions: p.sessionCount,
   }));
+
+  if (rest.length > 0) {
+    chartData.push({
+      name: `Other (${rest.length})`,
+      cost: rest.reduce((s, p) => s + p.totalCost, 0),
+      tokens: rest.reduce((s, p) => s + p.totalTokens, 0),
+      sessions: rest.reduce((s, p) => s + p.sessionCount, 0),
+    });
+  }
 
   const height = Math.max(200, chartData.length * 40);
 
@@ -73,8 +87,8 @@ export function ProjectCosts({ period }: Props) {
           labelFormatter={() => ""}
         />
         <Bar dataKey="cost" radius={[0, 4, 4, 0]}>
-          {chartData.map((_, i) => (
-            <Cell key={i} fill="#89b4fa" />
+          {chartData.map((entry, i) => (
+            <Cell key={i} fill={entry.name.startsWith("Other") ? "#585b70" : "#89b4fa"} />
           ))}
         </Bar>
       </BarChart>

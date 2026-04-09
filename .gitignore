@@ -2,5 +2,8 @@ node_modules/
 data/
 claude-monitor
 *.db
+*.ndjson
 .DS_Store
 ~/.claude-monitor.pid
+.playwright-cli/
+.superpowers/

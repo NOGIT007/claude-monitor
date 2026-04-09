@@ -87,3 +87,35 @@ jobs:
           git commit -m "chore: bump version to ${VERSION} [skip ci]"
           git tag "v${VERSION}"
           git push origin main --tags
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.new }}"
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_URL="${{ github.event.pull_request.html_url }}"
+
+          # Extract summary from PR body
+          PR_BODY=$(cat <<'PREOF'
+          ${{ github.event.pull_request.body }}
+          PREOF
+          )
+          SUMMARY=$(echo "$PR_BODY" | sed -n '/^## Summary/,/^##/p' | grep '^\s*-' | head -10)
+          if [ -z "$SUMMARY" ]; then
+            SUMMARY="- ${PR_TITLE}"
+          fi
+
+          gh release create "v${VERSION}" \
+            --title "v${VERSION}" \
+            --notes "$(cat <<EOF
+          ## What's Changed
+
+          ${SUMMARY}
+
+          **PR:** [#${PR_NUMBER}](${PR_URL})
+
+          **Full Changelog:** https://github.com/${{ github.repository }}/compare/v${{ steps.version.outputs.old }}...v${VERSION}
+          EOF
+          )"

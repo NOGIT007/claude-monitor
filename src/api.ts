@@ -10,6 +10,8 @@ import {
   getComparison,
   getCostHistory,
   getCumulativeCost,
+  getSessionHistory,
+  getUsageSnapshots,
 } from "./db";
 
 type StatsPeriod = "today" | "week" | "month";
@@ -47,6 +49,7 @@ export function handleApiRequest(req: Request, db: Database): Response | null {
       sessionId: s.session_id,
       projectPath: s.project_path,
       model: s.model,
+      entrypoint: s.entrypoint,
       elapsedMs: Date.now() - new Date(s.started_at).getTime(),
       totals: {
         input: s.total_input,
@@ -83,6 +86,27 @@ export function handleApiRequest(req: Request, db: Database): Response | null {
     return json(getSessionsSummary(db, period));
   }
 
+  if (pathname === "/api/stats/session-history") {
+    const period = parsePeriod(url);
+    if (!period) return json({ error: "Invalid period" }, 400);
+    const rows = getSessionHistory(db, period);
+    return json(
+      rows.map((s) => ({
+        sessionId: s.session_id,
+        projectPath: s.project_path,
+        model: s.model,
+        effort: s.effort || undefined,
+        startedAt: s.started_at,
+        durationMs: s.duration_ms,
+        input: s.total_input,
+        output: s.total_output,
+        cacheRead: s.total_cache_read,
+        cacheWrite: s.total_cache_creation,
+        costUsd: s.total_cost,
+      })),
+    );
+  }
+
   if (pathname === "/api/stats/comparison") {
     const period = parsePeriod(url);
     if (!period) return json({ error: "Invalid period" }, 400);
@@ -95,6 +119,11 @@ export function handleApiRequest(req: Request, db: Database): Response | null {
       return json({ error: `Invalid period: ${period}` }, 400);
     }
     return json(getStats(db, period as StatsPeriod));
+  }
+
+  if (pathname === "/api/usage-snapshots") {
+    const limit = parseInt(url.searchParams.get("limit") || "50", 10);
+    return json(getUsageSnapshots(db, limit));
   }
 
   if (pathname === "/api/history/cost") {

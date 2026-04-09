@@ -10,6 +10,7 @@ export interface ActiveSession {
   sessionId: string;
   projectPath: string;
   model: string;
+  entrypoint?: string;
   elapsedMs: number;
   totals: SessionTotals;
 }
@@ -73,6 +74,20 @@ export interface SessionsSummary {
 export interface Comparison {
   current: PeriodStats;
   previous: PeriodStats;
+}
+
+export interface SessionHistoryEntry {
+  sessionId: string;
+  projectPath: string;
+  model: string;
+  effort?: string;
+  startedAt: string;
+  durationMs: number;
+  input: number;
+  output: number;
+  cacheRead: number;
+  cacheWrite: number;
+  costUsd: number;
 }
 
 export interface CumulativeCostEntry {

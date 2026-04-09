@@ -24,6 +24,19 @@ export const PRICING: Record<
 
 const DEFAULT_MODEL = "claude-sonnet-4-6";
 
+function matchModel(model: string): string {
+  if (PRICING[model]) return model;
+  // Fuzzy match: "claude-haiku-4-5-20251001" → "claude-haiku-4-5"
+  for (const key of Object.keys(PRICING)) {
+    if (model.startsWith(key)) return key;
+  }
+  // Try partial match
+  if (model.includes("opus")) return "claude-opus-4-6";
+  if (model.includes("sonnet")) return "claude-sonnet-4-6";
+  if (model.includes("haiku")) return "claude-haiku-4-5";
+  return DEFAULT_MODEL;
+}
+
 export function calculateCost(
   model: string,
   input: number,
@@ -31,7 +44,7 @@ export function calculateCost(
   cacheWrite: number,
   cacheRead: number,
 ): number {
-  const prices = PRICING[model] ?? PRICING[DEFAULT_MODEL];
+  const prices = PRICING[matchModel(model)];
   const perMillion = 1_000_000;
 
   return (

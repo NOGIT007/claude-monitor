@@ -1,12 +1,14 @@
 import { Database } from "bun:sqlite";
-import { mkdirSync } from "fs";
-import { dirname } from "path";
+import { mkdirSync, readFileSync, readdirSync } from "fs";
+import { dirname, join } from "path";
+import { homedir } from "os";
 
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS sessions (
   session_id   TEXT PRIMARY KEY,
   project_path TEXT NOT NULL,
   model        TEXT NOT NULL,
+  effort       TEXT NOT NULL DEFAULT '',
   started_at   TEXT NOT NULL,
   last_seen_at TEXT NOT NULL
 );
@@ -32,6 +34,12 @@ export function initDb(dbPath = "./data/monitor.db"): Database {
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec("PRAGMA foreign_keys = ON;");
   db.exec(SCHEMA);
+  // Migration: add effort column if missing
+  try {
+    db.exec("ALTER TABLE sessions ADD COLUMN effort TEXT NOT NULL DEFAULT ''");
+  } catch {
+    // column already exists
+  }
   return db;
 }
 
@@ -41,16 +49,30 @@ export function upsertSession(
   projectPath: string,
   model: string,
   timestamp: string,
+  effort?: string,
 ): void {
+  const effortVal = effort || getCurrentEffort();
   db.run(
-    `INSERT INTO sessions (session_id, project_path, model, started_at, last_seen_at)
-     VALUES (?, ?, ?, ?, ?)
+    `INSERT INTO sessions (session_id, project_path, model, effort, started_at, last_seen_at)
+     VALUES (?, ?, ?, ?, ?, ?)
      ON CONFLICT(session_id) DO UPDATE SET
        project_path = excluded.project_path,
        model        = excluded.model,
+       effort       = CASE WHEN excluded.effort != '' THEN excluded.effort ELSE sessions.effort END,
        last_seen_at = excluded.last_seen_at`,
-    [sessionId, projectPath, model, timestamp, timestamp],
+    [sessionId, projectPath, model, effortVal, timestamp, timestamp],
   );
+}
+
+function getCurrentEffort(): string {
+  try {
+    const settingsPath = join(homedir(), ".claude", "settings.json");
+    const raw = readFileSync(settingsPath, "utf-8");
+    const settings = JSON.parse(raw);
+    return settings.effortLevel || "";
+  } catch {
+    return "";
+  }
 }
 
 export function insertTokenUsage(
@@ -113,27 +135,73 @@ export function getSessionsByIds(
 export function getActiveSessions(
   db: Database,
   withinMinutes = 30,
-): ActiveSession[] {
-  return db
-    .query(
-      `SELECT
-         s.session_id,
-         s.project_path,
-         s.model,
-         s.started_at,
-         s.last_seen_at,
-         COALESCE(SUM(t.input_tokens), 0)          AS total_input,
-         COALESCE(SUM(t.output_tokens), 0)         AS total_output,
-         COALESCE(SUM(t.cache_read_tokens), 0)     AS total_cache_read,
-         COALESCE(SUM(t.cache_creation_tokens), 0) AS total_cache_creation,
-         COALESCE(SUM(t.cost_usd), 0)              AS total_cost
-       FROM sessions s
-       LEFT JOIN token_usage t ON t.session_id = s.session_id
-       WHERE s.last_seen_at >= datetime('now', '-' || ? || ' minutes')
-       GROUP BY s.session_id
-       ORDER BY s.last_seen_at DESC`,
-    )
-    .all(withinMinutes) as ActiveSession[];
+): (ActiveSession & { entrypoint: string })[] {
+  // Use ~/.claude/sessions/ to find truly live sessions
+  const liveMetas = getLiveSessionMeta();
+
+  if (liveMetas.length === 0) {
+    // Fallback to time-based if no session files found
+    const rows = db
+      .query(
+        `SELECT
+           s.session_id,
+           s.project_path,
+           s.model,
+           s.started_at,
+           s.last_seen_at,
+           COALESCE(SUM(t.input_tokens), 0)          AS total_input,
+           COALESCE(SUM(t.output_tokens), 0)         AS total_output,
+           COALESCE(SUM(t.cache_read_tokens), 0)     AS total_cache_read,
+           COALESCE(SUM(t.cache_creation_tokens), 0) AS total_cache_creation,
+           COALESCE(SUM(t.cost_usd), 0)              AS total_cost
+         FROM sessions s
+         LEFT JOIN token_usage t ON t.session_id = s.session_id
+         WHERE s.last_seen_at >= datetime('now', '-' || ? || ' minutes')
+         GROUP BY s.session_id
+         ORDER BY s.last_seen_at DESC`,
+      )
+      .all(withinMinutes) as ActiveSession[];
+    return rows.map((r) => ({ ...r, entrypoint: "cli" }));
+  }
+
+  const entrypointMap = new Map(liveMetas.map((m) => [m.sessionId, m.entrypoint]));
+  const ids = liveMetas.map((m) => m.sessionId);
+  const sessions = getSessionsByIds(db, ids);
+  return sessions.map((s) => ({
+    ...s,
+    entrypoint: entrypointMap.get(s.session_id) ?? "cli",
+  }));
+}
+
+export interface LiveSessionMeta {
+  sessionId: string;
+  entrypoint: string;
+}
+
+function getLiveSessionMeta(): LiveSessionMeta[] {
+  const sessionsDir = join(homedir(), ".claude", "sessions");
+  try {
+    const files = readdirSync(sessionsDir);
+    const metas: LiveSessionMeta[] = [];
+    for (const file of files) {
+      if (!file.endsWith(".json")) continue;
+      try {
+        const raw = readFileSync(join(sessionsDir, file), "utf-8");
+        const data = JSON.parse(raw);
+        if (data.sessionId) {
+          metas.push({
+            sessionId: data.sessionId,
+            entrypoint: data.entrypoint ?? "cli",
+          });
+        }
+      } catch {
+        // skip unreadable
+      }
+    }
+    return metas;
+  } catch {
+    return [];
+  }
 }
 
 export interface PeriodStats {
@@ -147,7 +215,11 @@ export interface PeriodStats {
 
 export function getCutoff(period: "today" | "week" | "month"): string {
   const now = new Date();
-  if (period === "today") return new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+  if (period === "today") {
+    // Use local date, convert to start-of-day in UTC properly
+    const localMidnight = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return localMidnight.toISOString();
+  }
   if (period === "week") return new Date(now.getTime() - 7 * 86400000).toISOString();
   return new Date(now.getTime() - 30 * 86400000).toISOString();
 }
@@ -371,6 +443,80 @@ export interface DayEntry {
   cacheRead: number;
   cacheWrite: number;
   cost: number;
+}
+
+export interface SessionHistoryEntry {
+  session_id: string;
+  project_path: string;
+  model: string;
+  effort: string;
+  started_at: string;
+  last_seen_at: string;
+  duration_ms: number;
+  total_input: number;
+  total_output: number;
+  total_cache_read: number;
+  total_cache_creation: number;
+  total_cost: number;
+}
+
+export function getSessionHistory(
+  db: Database,
+  period: "today" | "week" | "month",
+): SessionHistoryEntry[] {
+  const cutoff = getCutoff(period);
+  return db
+    .query(
+      `SELECT
+         s.session_id,
+         s.project_path,
+         s.model,
+         s.effort,
+         s.started_at,
+         s.last_seen_at,
+         CAST((julianday(s.last_seen_at) - julianday(s.started_at)) * 86400000 AS INTEGER) AS duration_ms,
+         COALESCE(SUM(t.input_tokens), 0)          AS total_input,
+         COALESCE(SUM(t.output_tokens), 0)         AS total_output,
+         COALESCE(SUM(t.cache_read_tokens), 0)     AS total_cache_read,
+         COALESCE(SUM(t.cache_creation_tokens), 0) AS total_cache_creation,
+         COALESCE(SUM(t.cost_usd), 0)              AS total_cost
+       FROM sessions s
+       LEFT JOIN token_usage t ON t.session_id = s.session_id
+       WHERE s.started_at >= ? OR s.last_seen_at >= ?
+       GROUP BY s.session_id
+       ORDER BY s.started_at DESC`,
+    )
+    .all(cutoff, cutoff) as SessionHistoryEntry[];
+}
+
+export interface UsageSnapshot {
+  captured_at: string;
+  session_id: string;
+  model: string;
+  effort: string;
+  context_pct: number | null;
+  session_pct: number | null;
+  weekly_pct: number | null;
+}
+
+export function getUsageSnapshots(db: Database, limit = 50): UsageSnapshot[] {
+  // Create table if not exists (migration)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS usage_snapshots (
+      captured_at TEXT NOT NULL DEFAULT (datetime('now')),
+      session_id TEXT,
+      model TEXT,
+      effort TEXT,
+      context_pct REAL,
+      session_pct REAL,
+      weekly_pct REAL
+    )
+  `);
+  return db
+    .query(
+      `SELECT * FROM usage_snapshots ORDER BY captured_at DESC LIMIT ?`,
+    )
+    .all(limit) as UsageSnapshot[];
 }
 
 export function getHistory(db: Database, days: number): DayEntry[] {

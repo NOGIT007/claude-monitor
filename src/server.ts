@@ -3,6 +3,7 @@ import { startWatcher } from "./watcher";
 import { handleApiRequest } from "./api";
 import { handleWsOpen, handleWsClose, handleWsMessage } from "./ws";
 import { join, resolve } from "path";
+import "./otel-collector";
 
 const port = parseInt(process.env.PORT || "3000", 10);
 const db = initDb();

@@ -10,6 +10,8 @@ import { CostTrendChart } from "./components/CostTrendChart";
 import { PeakHours } from "./components/PeakHours";
 import { TokenChart } from "./components/TokenChart";
 import { BreakdownChart } from "./components/BreakdownChart";
+import { SessionHistory } from "./components/SessionHistory";
+import { RateLimits } from "./components/RateLimits";
 
 type Period = "today" | "week" | "month";
 
@@ -62,10 +64,16 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    fetch("/api/sessions")
-      .then((r) => r.json())
-      .then((data: ActiveSession[]) => setSessions(data))
-      .catch(() => {});
+    const fetchSessions = () =>
+      fetch("/api/sessions")
+        .then((r) => r.json())
+        .then((data: ActiveSession[]) => setSessions(data))
+        .catch(() => {});
+
+    fetchSessions();
+
+    // Poll every 15s to pick up closed sessions
+    const pollInterval = setInterval(fetchSessions, 15000);
 
     fetch("/api/history?days=30")
       .then((r) => r.json())
@@ -75,6 +83,7 @@ export function App() {
     connectWs();
 
     return () => {
+      clearInterval(pollInterval);
       clearTimeout(reconnectTimer.current);
       wsRef.current?.close();
     };
@@ -141,6 +150,14 @@ export function App() {
         <LiveSessions sessions={sessions} />
       </section>
 
+      {/* Rate Limits */}
+      <section style={{ marginBottom: "2rem" }}>
+        <h2 className="section-title">Rate Limits</h2>
+        <div className="card">
+          <RateLimits />
+        </div>
+      </section>
+
       {/* Stats with comparison badges */}
       <section style={{ marginBottom: "2rem" }}>
         <h2 className="section-title">Usage Statistics</h2>
@@ -205,6 +222,14 @@ export function App() {
         </section>
       </div>
 
+      {/* Session History Table */}
+      <section style={{ marginBottom: "2.5rem" }}>
+        <h2 className="section-title">Session History</h2>
+        <div className="card">
+          <SessionHistory period={period} />
+        </div>
+      </section>
+
       {/* Token History + Breakdown */}
       <div
         style={{
@@ -232,8 +257,22 @@ export function App() {
           </div>
         </section>
       </div>
+
+      {/* Footer */}
+      <footer
+        style={{
+          marginTop: "3rem",
+          paddingTop: "1.25rem",
+          borderTop: "1px solid rgba(69, 71, 90, 0.3)",
+          textAlign: "center",
+          fontFamily: "var(--font-mono)",
+          fontSize: "0.7rem",
+          color: "var(--ctp-overlay0)",
+          letterSpacing: "0.03em",
+        }}
+      >
+        made with AI <span style={{ color: "var(--ctp-red)", fontSize: "0.85rem" }}>♥</span>
+      </footer>
     </div>
   );
 }
-
-// Section titles now use .section-title CSS class from theme.css
