@@ -1,0 +1,6 @@
+node_modules/
+data/
+claude-monitor
+*.db
+.DS_Store
+~/.claude-monitor.pid
