@@ -135,7 +135,7 @@ export function startWatcher(options: WatcherOptions): { close: () => void } {
     close: () => {
       watcher.close();
     },
-    /** Exposed for testing only */
+    /** @internal Exposed for testing only */
     _offsets: offsets,
   };
 }

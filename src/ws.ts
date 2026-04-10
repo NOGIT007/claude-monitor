@@ -19,12 +19,16 @@ export function handleWsMessage(
 
 export function broadcast(data: object): void {
   const json = JSON.stringify(data);
+  const toRemove: ServerWebSocket[] = [];
   for (const ws of clients) {
     try {
       ws.send(json);
     } catch {
-      clients.delete(ws);
+      toRemove.push(ws);
     }
+  }
+  for (const ws of toRemove) {
+    clients.delete(ws);
   }
 }
 

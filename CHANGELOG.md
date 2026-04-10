@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-04-10
+
+### Added
+- **Thinking Depth analytics tab** — tracks thinking block frequency, output tokens per message, and thinking-only output over time with daily breakdown table
+- **Rate Limit analytics tab** — usage timeline chart (session 5h + weekly 7d), session burn rate chart, high usage sessions table, and time range selector (6h–7d)
+- **Explainer modals** — "What is this?" button on both new tabs explaining metrics, how to read charts, and what patterns to watch for
+- Backfill script (`scripts/backfill-thinking.ts`) to populate thinking data from existing JSONL files
+- `thinking_turns` column on `token_usage` table with auto-migration
+- Thinking block extraction in JSONL ingest pipeline
+- Analytics tabs: Activity Heatmap, Sparkline, Token Distribution, AnalyticsTabs container
+- ESLint and Prettier configuration
+
+### Changed
+- Analytics section reorganized into 5 tabs: Token Analytics, Workflow Intelligence, Productivity Analytics, Thinking Depth, Rate Limits
+- Tab switching now scrolls to tab bar instead of jumping to page top
+- Rate limit timeline chart X-axis thinned to ~12 readable labels with date+time for multi-day ranges
+- Improved pricing model support and chart theming
+
+### Fixed
+- API route ordering: named `/api/stats/*` routes now registered before the catch-all period route
+
 ## [1.1.0] - 2026-04-10
 
 ### Removed

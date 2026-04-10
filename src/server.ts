@@ -6,6 +6,10 @@ import { join, resolve } from "path";
 import "./otel-collector";
 
 const port = parseInt(process.env.PORT || "3000", 10);
+if (isNaN(port) || port < 1 || port > 65535) {
+  console.error(`Invalid PORT: ${process.env.PORT}`);
+  process.exit(1);
+}
 const db = initDb();
 const watcher = startWatcher({ db });
 
@@ -22,12 +26,17 @@ const buildResult = await Bun.build({
   },
 });
 
+if (buildResult.outputs.length === 0 || buildResult.logs.length > 0) {
+  console.error("Client build failed:", buildResult.logs);
+}
+
 const clientBundle = buildResult.outputs[0]
   ? await buildResult.outputs[0].text()
   : "";
 
 if (!clientBundle) {
-  console.error("Client build failed:", buildResult.logs);
+  console.error("Client build produced empty bundle — exiting.");
+  process.exit(1);
 }
 
 // Read CSS and favicon
@@ -42,6 +51,9 @@ const indexHtml = `<!DOCTYPE html>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Claude Monitor</title>
   <link rel="icon" type="image/svg+xml" href="/_assets/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap" />
   <link rel="stylesheet" href="/_assets/theme.css" />
 </head>
 <body>

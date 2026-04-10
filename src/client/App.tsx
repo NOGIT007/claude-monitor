@@ -2,31 +2,31 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { ActiveSession, DayEntry, PeriodStats, WsMessage } from "./types";
 import { LiveSessions } from "./components/LiveSessions";
 import { StatsTabs } from "./components/StatsTabs";
-import { SessionStats } from "./components/SessionStats";
-import { EfficiencyMetrics } from "./components/EfficiencyMetrics";
-import { ProjectCosts } from "./components/ProjectCosts";
-import { ModelBreakdown } from "./components/ModelBreakdown";
-import { CostTrendChart } from "./components/CostTrendChart";
-import { PeakHours } from "./components/PeakHours";
-import { TokenChart } from "./components/TokenChart";
-import { BreakdownChart } from "./components/BreakdownChart";
-import { SessionHistory } from "./components/SessionHistory";
 import { RateLimits } from "./components/RateLimits";
+import { AnalyticsTabs } from "./components/AnalyticsTabs";
 
 type Period = "today" | "week" | "month";
+type WsStatus = "connecting" | "connected" | "disconnected";
 
 export function App() {
   const [sessions, setSessions] = useState<ActiveSession[]>([]);
   const [history, setHistory] = useState<DayEntry[]>([]);
   const [currentStats, setCurrentStats] = useState<PeriodStats | null>(null);
   const [period, setPeriod] = useState<Period>("today");
+  const [wsStatus, setWsStatus] = useState<WsStatus>("connecting");
+  const [apiError, setApiError] = useState<string | null>(null);
   const wsRef = useRef<WebSocket | null>(null);
   const reconnectTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const connectWs = useCallback(() => {
+    setWsStatus("connecting");
     const protocol = location.protocol === "https:" ? "wss:" : "ws:";
     const ws = new WebSocket(`${protocol}//${location.host}/ws`);
     wsRef.current = ws;
+
+    ws.onopen = () => {
+      setWsStatus("connected");
+    };
 
     ws.onmessage = (event) => {
       try {
@@ -55,6 +55,7 @@ export function App() {
     };
 
     ws.onclose = () => {
+      setWsStatus("disconnected");
       reconnectTimer.current = setTimeout(connectWs, 3000);
     };
 
@@ -66,9 +67,17 @@ export function App() {
   useEffect(() => {
     const fetchSessions = () =>
       fetch("/api/sessions")
-        .then((r) => r.json())
-        .then((data: ActiveSession[]) => setSessions(data))
-        .catch(() => {});
+        .then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        })
+        .then((data: ActiveSession[]) => {
+          setSessions(data);
+          setApiError(null);
+        })
+        .catch((err) => {
+          setApiError(`Failed to fetch sessions: ${err.message}`);
+        });
 
     fetchSessions();
 
@@ -76,7 +85,10 @@ export function App() {
     const pollInterval = setInterval(fetchSessions, 15000);
 
     fetch("/api/history?days=30")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      })
       .then((data: DayEntry[]) => setHistory(data))
       .catch(() => {});
 
@@ -132,17 +144,60 @@ export function App() {
             </span>
           )}
         </div>
-        <span
-          style={{
-            fontFamily: "var(--font-mono)",
-            fontSize: "0.65rem",
-            color: "var(--ctp-overlay0)",
-            letterSpacing: "0.05em",
-          }}
-        >
-          powered by bun
-        </span>
+        <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+          <span
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.3rem",
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.6rem",
+              color: wsStatus === "connected" ? "var(--ctp-green)"
+                : wsStatus === "connecting" ? "var(--ctp-yellow)"
+                : "var(--ctp-red)",
+            }}
+            title={`WebSocket: ${wsStatus}`}
+          >
+            <span style={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              background: "currentColor",
+              display: "inline-block",
+            }} />
+            {wsStatus === "disconnected" ? "reconnecting…" : "live"}
+          </span>
+          <span
+            style={{
+              fontFamily: "var(--font-mono)",
+              fontSize: "0.65rem",
+              color: "var(--ctp-overlay0)",
+              letterSpacing: "0.05em",
+            }}
+          >
+            powered by bun
+          </span>
+        </div>
       </header>
+
+      {/* Error banner */}
+      {apiError && (
+        <div
+          style={{
+            background: "rgba(243, 139, 168, 0.1)",
+            border: "1px solid rgba(243, 139, 168, 0.3)",
+            borderRadius: 10,
+            padding: "0.6rem 1rem",
+            marginBottom: "1.5rem",
+            fontFamily: "var(--font-mono)",
+            fontSize: "0.75rem",
+            color: "var(--ctp-red)",
+          }}
+          role="alert"
+        >
+          {apiError}
+        </div>
+      )}
 
       {/* Live Sessions */}
       <section style={{ marginBottom: "2.5rem" }}>
@@ -164,99 +219,11 @@ export function App() {
         <StatsTabs onStatsChange={setCurrentStats} onPeriodChange={setPeriod} />
       </section>
 
-      {/* Session Stats */}
-      <section style={{ marginBottom: "2rem" }}>
-        <h2 className="section-title">Session Metrics</h2>
-        <SessionStats period={period} />
-      </section>
-
-      {/* Efficiency */}
-      <section style={{ marginBottom: "2rem" }}>
-        <h2 className="section-title">Efficiency</h2>
-        <EfficiencyMetrics stats={currentStats} />
-      </section>
-
-      {/* Cost per Project + Model Breakdown */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "1.5rem",
-          marginBottom: "2.5rem",
-        }}
-      >
-        <section>
-          <h2 className="section-title">Cost per Project</h2>
-          <div className="card">
-            <ProjectCosts period={period} />
-          </div>
-        </section>
-        <section>
-          <h2 className="section-title">Model Breakdown</h2>
-          <div className="card">
-            <ModelBreakdown period={period} />
-          </div>
-        </section>
-      </div>
-
-      {/* Cost Trend + Peak Hours */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "1.5rem",
-          marginBottom: "2.5rem",
-        }}
-      >
-        <section>
-          <h2 className="section-title">Cost Trend</h2>
-          <div className="card">
-            <CostTrendChart />
-          </div>
-        </section>
-        <section>
-          <h2 className="section-title">Peak Hours</h2>
-          <div className="card">
-            <PeakHours />
-          </div>
-        </section>
-      </div>
-
-      {/* Session History Table */}
+      {/* Analytics */}
       <section style={{ marginBottom: "2.5rem" }}>
-        <h2 className="section-title">Session History</h2>
-        <div className="card">
-          <SessionHistory period={period} />
-        </div>
+        <h2 className="section-title">Analytics</h2>
+        <AnalyticsTabs period={period} currentStats={currentStats} history={history} />
       </section>
-
-      {/* Token History + Breakdown */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr 1fr",
-          gap: "1.5rem",
-        }}
-      >
-        <section>
-          <h2 className="section-title">Token History</h2>
-          <div className="card">
-            <TokenChart history={history} />
-          </div>
-        </section>
-        <section>
-          <h2 className="section-title">Token Breakdown</h2>
-          <div className="card">
-            {currentStats ? (
-              <BreakdownChart stats={currentStats} />
-            ) : (
-              <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>
-                Select a period above to see breakdown
-              </p>
-            )}
-          </div>
-        </section>
-      </div>
 
       {/* Footer */}
       <footer

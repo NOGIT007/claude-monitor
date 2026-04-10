@@ -141,7 +141,7 @@ describe("db", () => {
 
       insertTokenUsage(db, "active-1", now, 100, 50, 10, 80, 0.05);
 
-      const sessions = getActiveSessions(db, 30);
+      const sessions = getActiveSessions(db, 30, "/nonexistent-test-dir");
       expect(sessions.length).toBe(1);
       expect(sessions[0].session_id).toBe("active-1");
       expect(sessions[0].total_input).toBe(100);
@@ -152,7 +152,7 @@ describe("db", () => {
     it("returns empty array when no active sessions", () => {
       const old = "2020-01-01T00:00:00.000Z";
       upsertSession(db, "stale-1", "/p", "opus-4", old);
-      const sessions = getActiveSessions(db, 30);
+      const sessions = getActiveSessions(db, 30, "/nonexistent-test-dir");
       expect(sessions.length).toBe(0);
     });
   });
@@ -291,8 +291,9 @@ describe("db", () => {
 
   describe("getSessionsSummary", () => {
     it("returns session summary with cost", () => {
-      const start = "2026-04-09T10:00:00.000Z";
-      const end = "2026-04-09T11:00:00.000Z";
+      const now = new Date();
+      const start = new Date(now.getTime() - 3600000).toISOString(); // 1 hour ago
+      const end = now.toISOString();
       upsertSession(db, "sess-1", "/p", "opus-4", start);
       upsertSession(db, "sess-1", "/p", "opus-4", end); // updates last_seen_at
       insertTokenUsage(db, "sess-1", start, 100, 50, 20, 80, 0.05);

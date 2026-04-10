@@ -45,7 +45,7 @@ export function SummaryCards({ stats, comparison }: Props) {
       change: prev ? delta(stats.totalCost, prev.totalCost) : null,
     },
     {
-      label: "Cache Savings",
+      label: "Cache Hit Rate",
       value: `${cacheSavings.toFixed(1)}%`,
       accent: "mauve",
     },

@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from "recharts";
 import type { ProjectStats } from "../types";
 import { formatCost, projectName } from "../format";
-import { tooltipStyle, axisStyle } from "../chart-theme";
+import { tooltipStyle, axisStyle, chartColors } from "../chart-theme";
 
 interface Props {
   period: "today" | "week" | "month";
@@ -23,33 +23,36 @@ export function ProjectCosts({ period }: Props) {
       .catch(() => setLoading(false));
   }, [period]);
 
+  const chartData = useMemo(() => {
+    const TOP_N = 5;
+    const sorted = [...data].sort((a, b) => b.totalCost - a.totalCost);
+    const top = sorted.slice(0, TOP_N);
+    const rest = sorted.slice(TOP_N);
+
+    const result = top.map((p) => ({
+      name: projectName(p.projectPath),
+      cost: p.totalCost,
+      tokens: p.totalTokens,
+      sessions: p.sessionCount,
+    }));
+
+    if (rest.length > 0) {
+      result.push({
+        name: `Other (${rest.length})`,
+        cost: rest.reduce((s, p) => s + p.totalCost, 0),
+        tokens: rest.reduce((s, p) => s + p.totalTokens, 0),
+        sessions: rest.reduce((s, p) => s + p.sessionCount, 0),
+      });
+    }
+    return result;
+  }, [data]);
+
   if (loading) {
     return <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>Loading…</p>;
   }
 
   if (data.length === 0) {
     return <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>No project data</p>;
-  }
-
-  const TOP_N = 5;
-  const sorted = [...data].sort((a, b) => b.totalCost - a.totalCost);
-  const top = sorted.slice(0, TOP_N);
-  const rest = sorted.slice(TOP_N);
-
-  const chartData = top.map((p) => ({
-    name: projectName(p.projectPath),
-    cost: p.totalCost,
-    tokens: p.totalTokens,
-    sessions: p.sessionCount,
-  }));
-
-  if (rest.length > 0) {
-    chartData.push({
-      name: `Other (${rest.length})`,
-      cost: rest.reduce((s, p) => s + p.totalCost, 0),
-      tokens: rest.reduce((s, p) => s + p.totalTokens, 0),
-      sessions: rest.reduce((s, p) => s + p.sessionCount, 0),
-    });
   }
 
   const height = Math.max(200, chartData.length * 40);
@@ -87,8 +90,8 @@ export function ProjectCosts({ period }: Props) {
           labelFormatter={() => ""}
         />
         <Bar dataKey="cost" radius={[0, 4, 4, 0]}>
-          {chartData.map((entry, i) => (
-            <Cell key={i} fill={entry.name.startsWith("Other") ? "#585b70" : "#89b4fa"} />
+          {chartData.map((entry) => (
+            <Cell key={entry.name} fill={entry.name.startsWith("Other") ? chartColors.barMuted : chartColors.bar} />
           ))}
         </Bar>
       </BarChart>

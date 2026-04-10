@@ -35,3 +35,13 @@ export const gridStyle = {
   strokeDasharray: "3 3",
   stroke: "rgba(69, 71, 90, 0.3)",
 };
+
+/** Standard chart colors matching Catppuccin Mocha palette */
+export const chartColors = {
+  input: "#89b4fa",      // ctp-blue
+  output: "#fab387",     // ctp-peach
+  cacheRead: "#a6e3a1",  // ctp-green
+  cacheWrite: "#cba6f7", // ctp-mauve
+  bar: "#89b4fa",        // ctp-blue
+  barMuted: "#585b70",   // ctp-surface2
+};

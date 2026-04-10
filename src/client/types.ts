@@ -90,6 +90,71 @@ export interface SessionHistoryEntry {
   costUsd: number;
 }
 
+/** Matches db.ts ActivityDay — keep in sync */
+export interface ActivityDay {
+  date: string;
+  count: number;
+  cost: number;
+}
+
+export type AnalyticsTab = "tokens" | "workflow" | "productivity" | "thinking" | "ratelimits";
+
+export interface RateLimitTimelineEntry {
+  captured_at: string;
+  session_id: string;
+  model: string;
+  session_pct: number;
+  weekly_pct: number;
+}
+
+export interface StopoutEvent {
+  session_id: string;
+  model: string;
+  peak_session_pct: number;
+  peak_weekly_pct: number;
+  first_seen: string;
+  last_seen: string;
+  duration_min: number;
+  snapshots: number;
+}
+
+export interface SessionBurnRate {
+  session_id: string;
+  model: string;
+  start_pct: number;
+  end_pct: number;
+  duration_min: number;
+  burn_rate_per_min: number;
+  first_seen: string;
+}
+
+export interface RateLimitStats {
+  totalSnapshots: number;
+  totalSessions: number;
+  stopoutSessions: number;
+  avgPeakSessionPct: number;
+  maxSessionPct: number;
+  avgBurnRatePerMin: number;
+  currentSessionPct: number | null;
+  currentWeeklyPct: number | null;
+}
+
+export interface RateLimitData {
+  stats: RateLimitStats;
+  timeline: RateLimitTimelineEntry[];
+  stopouts: StopoutEvent[];
+  burnRates: SessionBurnRate[];
+}
+
+export interface ThinkingDepthEntry {
+  date: string;
+  totalMessages: number;
+  thinkingMessages: number;
+  thinkingRate: number;
+  avgOutputTokens: number;
+  avgOutputPerThinking: number;
+}
+
 export interface CumulativeCostEntry {
   date: string;
   dailyCost: number;

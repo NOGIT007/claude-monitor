@@ -21,14 +21,15 @@ CREATE TABLE IF NOT EXISTS token_usage (
   output_tokens          INTEGER NOT NULL DEFAULT 0,
   cache_creation_tokens  INTEGER NOT NULL DEFAULT 0,
   cache_read_tokens      INTEGER NOT NULL DEFAULT 0,
-  cost_usd               REAL NOT NULL DEFAULT 0
+  cost_usd               REAL NOT NULL DEFAULT 0,
+  thinking_turns         INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE INDEX IF NOT EXISTS idx_token_usage_timestamp ON token_usage(timestamp);
 CREATE INDEX IF NOT EXISTS idx_token_usage_session   ON token_usage(session_id);
 `;
 
-export function initDb(dbPath = "./data/monitor.db"): Database {
+export function initDb(dbPath = join(import.meta.dir, "../data/monitor.db")): Database {
   mkdirSync(dirname(dbPath), { recursive: true });
   const db = new Database(dbPath);
   db.exec("PRAGMA journal_mode = WAL;");
@@ -37,8 +38,20 @@ export function initDb(dbPath = "./data/monitor.db"): Database {
   // Migration: add effort column if missing
   try {
     db.exec("ALTER TABLE sessions ADD COLUMN effort TEXT NOT NULL DEFAULT ''");
-  } catch {
-    // column already exists
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("duplicate column")) {
+      console.error("[db] Migration error:", msg);
+    }
+  }
+  // Migration: add thinking_turns column if missing
+  try {
+    db.exec("ALTER TABLE token_usage ADD COLUMN thinking_turns INTEGER NOT NULL DEFAULT 0");
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (!msg.includes("duplicate column")) {
+      console.error("[db] Migration error:", msg);
+    }
   }
   return db;
 }
@@ -84,11 +97,12 @@ export function insertTokenUsage(
   cacheCreate: number,
   cacheRead: number,
   costUsd: number,
+  thinkingTurns = 0,
 ): void {
   db.run(
-    `INSERT INTO token_usage (session_id, timestamp, input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens, cost_usd)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [sessionId, timestamp, input, output, cacheCreate, cacheRead, costUsd],
+    `INSERT INTO token_usage (session_id, timestamp, input_tokens, output_tokens, cache_creation_tokens, cache_read_tokens, cost_usd, thinking_turns)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [sessionId, timestamp, input, output, cacheCreate, cacheRead, costUsd, thinkingTurns],
   );
 }
 
@@ -135,9 +149,10 @@ export function getSessionsByIds(
 export function getActiveSessions(
   db: Database,
   withinMinutes = 30,
+  sessionsDir?: string,
 ): (ActiveSession & { entrypoint: string })[] {
   // Use ~/.claude/sessions/ to find truly live sessions
-  const liveMetas = getLiveSessionMeta();
+  const liveMetas = getLiveSessionMeta(sessionsDir);
 
   if (liveMetas.length === 0) {
     // Fallback to time-based if no session files found
@@ -178,8 +193,8 @@ export interface LiveSessionMeta {
   entrypoint: string;
 }
 
-function getLiveSessionMeta(): LiveSessionMeta[] {
-  const sessionsDir = join(homedir(), ".claude", "sessions");
+function getLiveSessionMeta(overrideDir?: string): LiveSessionMeta[] {
+  const sessionsDir = overrideDir ?? join(homedir(), ".claude", "sessions");
   try {
     const files = readdirSync(sessionsDir);
     const metas: LiveSessionMeta[] = [];
@@ -328,7 +343,26 @@ export function getPeakHours(db: Database, days: number): HourStats[] {
   return db
     .query(
       `SELECT
-         CAST(strftime('%H', t.timestamp) AS INTEGER) AS hour,
+         CAST(strftime('%H', t.timestamp, 'localtime') AS INTEGER) AS hour,
+         COALESCE(SUM(t.input_tokens + t.output_tokens), 0) AS totalTokens,
+         COALESCE(SUM(t.cost_usd), 0) AS totalCost
+       FROM token_usage t
+       WHERE t.timestamp >= ?
+       GROUP BY hour
+       ORDER BY hour`,
+    )
+    .all(cutoff) as HourStats[];
+}
+
+export function getPeakHoursByPeriod(
+  db: Database,
+  period: "today" | "week" | "month",
+): HourStats[] {
+  const cutoff = getCutoff(period);
+  return db
+    .query(
+      `SELECT
+         CAST(strftime('%H', t.timestamp, 'localtime') AS INTEGER) AS hour,
          COALESCE(SUM(t.input_tokens + t.output_tokens), 0) AS totalTokens,
          COALESCE(SUM(t.cost_usd), 0) AS totalCost
        FROM token_usage t
@@ -519,6 +553,165 @@ export function getUsageSnapshots(db: Database, limit = 50): UsageSnapshot[] {
     .all(limit) as UsageSnapshot[];
 }
 
+/** Rate limit analytics — timeline of session_pct and weekly_pct snapshots */
+export interface RateLimitTimelineEntry {
+  captured_at: string;
+  session_id: string;
+  model: string;
+  session_pct: number;
+  weekly_pct: number;
+}
+
+export function getRateLimitTimeline(db: Database, hours = 24): RateLimitTimelineEntry[] {
+  return db
+    .query(
+      `SELECT captured_at, session_id, model,
+              COALESCE(session_pct, 0) AS session_pct,
+              COALESCE(weekly_pct, 0) AS weekly_pct
+       FROM usage_snapshots
+       WHERE captured_at >= datetime('now', '-' || ? || ' hours')
+       ORDER BY captured_at ASC`,
+    )
+    .all(hours) as RateLimitTimelineEntry[];
+}
+
+/** Detect stopouts: sessions where session_pct reached >= threshold */
+export interface StopoutEvent {
+  session_id: string;
+  model: string;
+  peak_session_pct: number;
+  peak_weekly_pct: number;
+  first_seen: string;
+  last_seen: string;
+  duration_min: number;
+  snapshots: number;
+}
+
+export function getStopoutEvents(db: Database, threshold = 80): StopoutEvent[] {
+  return db
+    .query(
+      `SELECT
+         session_id,
+         MAX(model) AS model,
+         MAX(COALESCE(session_pct, 0)) AS peak_session_pct,
+         MAX(COALESCE(weekly_pct, 0)) AS peak_weekly_pct,
+         MIN(captured_at) AS first_seen,
+         MAX(captured_at) AS last_seen,
+         CAST((julianday(MAX(captured_at)) - julianday(MIN(captured_at))) * 1440 AS INTEGER) AS duration_min,
+         COUNT(*) AS snapshots
+       FROM usage_snapshots
+       WHERE session_pct >= ?
+       GROUP BY session_id
+       ORDER BY first_seen DESC`,
+    )
+    .all(threshold) as StopoutEvent[];
+}
+
+/** Burn rate: how fast session_pct increased per session */
+export interface SessionBurnRate {
+  session_id: string;
+  model: string;
+  start_pct: number;
+  end_pct: number;
+  duration_min: number;
+  burn_rate_per_min: number;
+  first_seen: string;
+}
+
+export function getSessionBurnRates(db: Database): SessionBurnRate[] {
+  return db
+    .query(
+      `WITH session_bounds AS (
+         SELECT
+           session_id,
+           MAX(model) AS model,
+           MIN(COALESCE(session_pct, 0)) AS start_pct,
+           MAX(COALESCE(session_pct, 0)) AS end_pct,
+           MIN(captured_at) AS first_seen,
+           MAX(captured_at) AS last_seen,
+           CAST((julianday(MAX(captured_at)) - julianday(MIN(captured_at))) * 1440 AS REAL) AS duration_min,
+           COUNT(*) AS snapshots
+         FROM usage_snapshots
+         GROUP BY session_id
+         HAVING snapshots >= 2 AND duration_min > 0
+       )
+       SELECT
+         session_id,
+         model,
+         start_pct,
+         end_pct,
+         CAST(duration_min AS INTEGER) AS duration_min,
+         ROUND((end_pct - start_pct) / duration_min, 2) AS burn_rate_per_min,
+         first_seen
+       FROM session_bounds
+       WHERE end_pct > start_pct
+       ORDER BY first_seen DESC`,
+    )
+    .all() as SessionBurnRate[];
+}
+
+/** Aggregate rate limit stats */
+export interface RateLimitStats {
+  totalSnapshots: number;
+  totalSessions: number;
+  stopoutSessions: number;
+  avgPeakSessionPct: number;
+  maxSessionPct: number;
+  avgBurnRatePerMin: number;
+  currentSessionPct: number | null;
+  currentWeeklyPct: number | null;
+}
+
+export function getRateLimitStats(db: Database): RateLimitStats {
+  const agg = db
+    .query(
+      `SELECT
+         COUNT(*) AS totalSnapshots,
+         COUNT(DISTINCT session_id) AS totalSessions,
+         MAX(COALESCE(session_pct, 0)) AS maxSessionPct
+       FROM usage_snapshots`,
+    )
+    .get() as { totalSnapshots: number; totalSessions: number; maxSessionPct: number };
+
+  const stopouts = db
+    .query(
+      `SELECT COUNT(DISTINCT session_id) AS stopoutSessions
+       FROM usage_snapshots WHERE session_pct >= 80`,
+    )
+    .get() as { stopoutSessions: number };
+
+  const avgPeak = db
+    .query(
+      `SELECT ROUND(AVG(peak), 1) AS avgPeak FROM (
+         SELECT session_id, MAX(COALESCE(session_pct, 0)) AS peak
+         FROM usage_snapshots GROUP BY session_id
+       )`,
+    )
+    .get() as { avgPeak: number };
+
+  const burnRates = getSessionBurnRates(db);
+  const avgBurn = burnRates.length > 0
+    ? burnRates.reduce((s, b) => s + b.burn_rate_per_min, 0) / burnRates.length
+    : 0;
+
+  const latest = db
+    .query(
+      `SELECT session_pct, weekly_pct FROM usage_snapshots ORDER BY captured_at DESC LIMIT 1`,
+    )
+    .get() as { session_pct: number | null; weekly_pct: number | null } | null;
+
+  return {
+    totalSnapshots: agg.totalSnapshots,
+    totalSessions: agg.totalSessions,
+    stopoutSessions: stopouts.stopoutSessions,
+    avgPeakSessionPct: avgPeak.avgPeak ?? 0,
+    maxSessionPct: agg.maxSessionPct,
+    avgBurnRatePerMin: Math.round(avgBurn * 100) / 100,
+    currentSessionPct: latest?.session_pct ?? null,
+    currentWeeklyPct: latest?.weekly_pct ?? null,
+  };
+}
+
 export function getHistory(db: Database, days: number): DayEntry[] {
   return db
     .query(
@@ -535,4 +728,61 @@ export function getHistory(db: Database, days: number): DayEntry[] {
        ORDER BY date ASC`,
     )
     .all(days) as DayEntry[];
+}
+
+/** Matches client/types.ts ActivityDay — keep in sync */
+export interface ActivityDay {
+  date: string;
+  count: number;
+  cost: number;
+}
+
+export function getActivityHeatmap(db: Database, weeks: number): ActivityDay[] {
+  const days = weeks * 7;
+  return db
+    .query(
+      `SELECT date(t.timestamp) AS date, COUNT(*) AS count, COALESCE(SUM(t.cost_usd), 0) AS cost
+       FROM token_usage t
+       WHERE t.timestamp >= datetime('now', '-' || ? || ' days')
+       GROUP BY date(t.timestamp)
+       ORDER BY date ASC`,
+    )
+    .all(days) as ActivityDay[];
+}
+
+export interface ThinkingDepthEntry {
+  date: string;
+  totalMessages: number;
+  thinkingMessages: number;
+  thinkingRate: number;
+  avgOutputTokens: number;
+  avgOutputPerThinking: number;
+}
+
+export function getThinkingDepth(
+  db: Database,
+  period: "today" | "week" | "month",
+): ThinkingDepthEntry[] {
+  const cutoff = getCutoff(period);
+  return db
+    .query(
+      `SELECT
+         date(t.timestamp) AS date,
+         COUNT(*)                                       AS totalMessages,
+         SUM(CASE WHEN t.thinking_turns > 0 THEN 1 ELSE 0 END) AS thinkingMessages,
+         CASE WHEN COUNT(*) > 0
+           THEN ROUND(100.0 * SUM(CASE WHEN t.thinking_turns > 0 THEN 1 ELSE 0 END) / COUNT(*), 1)
+           ELSE 0 END                                  AS thinkingRate,
+         ROUND(AVG(t.output_tokens), 0)                AS avgOutputTokens,
+         CASE WHEN SUM(CASE WHEN t.thinking_turns > 0 THEN 1 ELSE 0 END) > 0
+           THEN ROUND(
+             SUM(CASE WHEN t.thinking_turns > 0 THEN t.output_tokens ELSE 0 END) * 1.0
+             / SUM(CASE WHEN t.thinking_turns > 0 THEN 1 ELSE 0 END), 0)
+           ELSE 0 END                                  AS avgOutputPerThinking
+       FROM token_usage t
+       WHERE t.timestamp >= ?
+       GROUP BY date(t.timestamp)
+       ORDER BY date ASC`,
+    )
+    .all(cutoff) as ThinkingDepthEntry[];
 }

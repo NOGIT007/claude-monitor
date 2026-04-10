@@ -11,7 +11,13 @@ import {
 } from "recharts";
 import type { CumulativeCostEntry } from "../types";
 import { formatCost } from "../format";
-import { tooltipStyle, axisStyle, gridStyle } from "../chart-theme";
+import { tooltipStyle, axisStyle, gridStyle, chartColors } from "../chart-theme";
+
+function compactCost(v: number): string {
+  if (v >= 1000) return `$${(v / 1000).toFixed(1)}k`;
+  if (v >= 1) return `$${v.toFixed(0)}`;
+  return `$${v.toFixed(2)}`;
+}
 
 export function CostTrendChart() {
   const [data, setData] = useState<CumulativeCostEntry[]>([]);
@@ -43,7 +49,7 @@ export function CostTrendChart() {
 
   return (
     <ResponsiveContainer width="100%" height={300}>
-      <ComposedChart data={data}>
+      <ComposedChart data={data} margin={{ top: 5, right: 60, bottom: 5, left: 10 }}>
         <CartesianGrid {...gridStyle} />
         <XAxis
           dataKey="date"
@@ -53,34 +59,38 @@ export function CostTrendChart() {
         />
         <YAxis
           yAxisId="left"
+          width={55}
           label={{
-            value: "Daily ($)",
+            value: "Daily",
             angle: -90,
             position: "insideLeft",
             fill: "#7f849c",
             fontSize: 11,
             fontFamily: "'Outfit', system-ui",
+            offset: 5,
           }}
           tick={axisStyle.tick}
           axisLine={axisStyle.axisLine}
           tickLine={axisStyle.tickLine}
-          tickFormatter={(v: number) => formatCost(v)}
+          tickFormatter={compactCost}
         />
         <YAxis
           yAxisId="right"
           orientation="right"
+          width={55}
           label={{
-            value: "Cumulative ($)",
+            value: "Cumulative",
             angle: 90,
             position: "insideRight",
             fill: "#7f849c",
             fontSize: 11,
             fontFamily: "'Outfit', system-ui",
+            offset: 5,
           }}
           tick={axisStyle.tick}
           axisLine={axisStyle.axisLine}
           tickLine={axisStyle.tickLine}
-          tickFormatter={(v: number) => formatCost(v)}
+          tickFormatter={compactCost}
         />
         <Tooltip
           contentStyle={tooltipStyle.contentStyle}
@@ -96,7 +106,7 @@ export function CostTrendChart() {
         <Bar
           yAxisId="left"
           dataKey="dailyCost"
-          fill="#fab387"
+          fill={chartColors.output}
           opacity={0.7}
           name="dailyCost"
           radius={[4, 4, 0, 0]}
@@ -105,7 +115,7 @@ export function CostTrendChart() {
           yAxisId="right"
           type="monotone"
           dataKey="cumulativeCost"
-          stroke="#a6e3a1"
+          stroke={chartColors.cacheRead}
           strokeWidth={2}
           dot={false}
           name="cumulativeCost"

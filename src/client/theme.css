@@ -1,7 +1,6 @@
 /* Claude Monitor — Observatory Theme */
 /* Catppuccin Mocha palette + atmospheric depth */
-
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700;800&display=swap');
+/* Fonts loaded via <link> in HTML for non-blocking render */
 
 :root {
   /* Base */
@@ -255,6 +254,15 @@ body::before {
   background: rgba(49, 50, 68, 0.8);
   color: var(--ctp-text);
   border-color: rgba(69, 71, 90, 0.5);
+}
+
+/* Table row hover */
+.session-row {
+  transition: background 0.15s;
+}
+
+.session-row:hover {
+  background: rgba(69, 71, 90, 0.15);
 }
 
 /* Smooth transitions */

@@ -20,6 +20,8 @@ function makeRequest(path: string): Request {
   return new Request(`http://localhost${path}`);
 }
 
+const testApiOptions = { sessionsDir: "/nonexistent-test-dir" };
+
 describe("api", () => {
   let db: Database;
 
@@ -43,7 +45,7 @@ describe("api", () => {
 
   describe("GET /api/sessions", () => {
     it("returns active sessions array", async () => {
-      const res = handleApiRequest(makeRequest("/api/sessions"), db);
+      const res = handleApiRequest(makeRequest("/api/sessions"), db, testApiOptions);
       expect(res).not.toBeNull();
       expect(res!.status).toBe(200);
       expect(res!.headers.get("Content-Type")).toBe("application/json");

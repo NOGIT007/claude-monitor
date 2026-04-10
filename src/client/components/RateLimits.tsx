@@ -73,18 +73,26 @@ function Bar({ pct, label }: { pct: number | null; label: string }) {
 
 export function RateLimits() {
   const [snapshots, setSnapshots] = useState<UsageSnapshot[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = () =>
       fetch("/api/usage-snapshots?limit=10")
         .then((r) => r.json())
-        .then(setSnapshots)
-        .catch(() => {});
+        .then((data: UsageSnapshot[]) => {
+          setSnapshots(data);
+          setLoading(false);
+        })
+        .catch(() => setLoading(false));
 
     fetchData();
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  if (loading) {
+    return <p style={{ color: "var(--ctp-subtext0)", margin: 0, fontSize: "0.75rem" }}>Loading…</p>;
+  }
 
   if (snapshots.length === 0) {
     return (

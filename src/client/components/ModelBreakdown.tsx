@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 import type { ModelStats } from "../types";
 import { formatCost } from "../format";
@@ -31,6 +31,14 @@ export function ModelBreakdown({ period }: Props) {
       .catch(() => setLoading(false));
   }, [period]);
 
+  const totalCost = useMemo(() => data.reduce((sum, m) => sum + m.totalCost, 0), [data]);
+
+  const chartData = useMemo(() => data.map((m) => ({
+    name: m.model,
+    value: m.totalCost,
+    color: modelColor(m.model),
+  })), [data]);
+
   if (loading) {
     return <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>Loading…</p>;
   }
@@ -38,14 +46,6 @@ export function ModelBreakdown({ period }: Props) {
   if (data.length === 0) {
     return <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>No model data</p>;
   }
-
-  const totalCost = data.reduce((sum, m) => sum + m.totalCost, 0);
-
-  const chartData = data.map((m) => ({
-    name: m.model,
-    value: m.totalCost,
-    color: modelColor(m.model),
-  }));
 
   return (
     <div>
@@ -62,8 +62,8 @@ export function ModelBreakdown({ period }: Props) {
             paddingAngle={2}
             strokeWidth={0}
           >
-            {chartData.map((entry, i) => (
-              <Cell key={i} fill={entry.color} />
+            {chartData.map((entry) => (
+              <Cell key={entry.name} fill={entry.color} />
             ))}
           </Pie>
           <Tooltip
