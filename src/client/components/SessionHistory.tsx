@@ -134,6 +134,18 @@ export function SessionHistory({ period }: Props) {
     userSelect: "none",
   };
 
+  const sortableProps = (key: SortKey) => ({
+    role: "button" as const,
+    tabIndex: 0,
+    "aria-sort": sortKey === key ? (sortDir === "asc" ? "ascending" as const : "descending" as const) : undefined,
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        toggleSort(key);
+      }
+    },
+  });
+
   const headerLeft: React.CSSProperties = { ...headerBase, textAlign: "left" };
   const headerRight: React.CSSProperties = { ...headerBase, textAlign: "right" };
 
@@ -164,24 +176,24 @@ export function SessionHistory({ period }: Props) {
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr>
-              <th style={headerLeft} onClick={() => toggleSort("date")}>
+              <th style={headerLeft} onClick={() => toggleSort("date")} {...sortableProps("date")}>
                 Date{arrow("date")}
               </th>
-              <th style={headerLeft} onClick={() => toggleSort("project")}>
+              <th style={headerLeft} onClick={() => toggleSort("project")} {...sortableProps("project")}>
                 Project{arrow("project")}
               </th>
-              <th style={headerLeft} onClick={() => toggleSort("model")}>
+              <th style={headerLeft} onClick={() => toggleSort("model")} {...sortableProps("model")}>
                 Model{arrow("model")}
               </th>
               <th style={headerLeft}>Effort</th>
-              <th style={headerRight} onClick={() => toggleSort("duration")}>
+              <th style={headerRight} onClick={() => toggleSort("duration")} {...sortableProps("duration")}>
                 Duration{arrow("duration")}
               </th>
               <th style={headerRight}>Input</th>
               <th style={headerRight}>Output</th>
               <th style={headerRight}>Cache R</th>
               <th style={headerRight}>Cache W</th>
-              <th style={headerRight} onClick={() => toggleSort("cost")}>
+              <th style={headerRight} onClick={() => toggleSort("cost")} {...sortableProps("cost")}>
                 Cost{arrow("cost")}
               </th>
             </tr>
@@ -190,13 +202,7 @@ export function SessionHistory({ period }: Props) {
             {pageData.map((s) => (
               <tr
                 key={s.sessionId}
-                style={{ transition: "background 0.15s" }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.background = "rgba(69, 71, 90, 0.15)")
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.background = "transparent")
-                }
+                className="session-row"
               >
                 <td style={{ ...cellStyle, textAlign: "left", color: "var(--ctp-subtext1)" }}>
                   <span>{formatDate(s.startedAt)}</span>{" "}
@@ -286,6 +292,7 @@ export function SessionHistory({ period }: Props) {
             style={btnStyle(page === 0)}
             disabled={page === 0}
             onClick={() => setPage((p) => p - 1)}
+            aria-label="Previous page"
           >
             ← Prev
           </button>
@@ -293,6 +300,7 @@ export function SessionHistory({ period }: Props) {
             style={btnStyle(page >= totalPages - 1)}
             disabled={page >= totalPages - 1}
             onClick={() => setPage((p) => p + 1)}
+            aria-label="Next page"
           >
             Next →
           </button>

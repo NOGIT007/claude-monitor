@@ -9,18 +9,11 @@ import {
 } from "recharts";
 import type { DayEntry } from "../types";
 import { formatNumber } from "../format";
-import { tooltipStyle, axisStyle } from "../chart-theme";
+import { tooltipStyle, axisStyle, chartColors } from "../chart-theme";
 
 interface Props {
   history: DayEntry[];
 }
-
-const COLORS = {
-  input: "#89b4fa",
-  output: "#fab387",
-  cacheRead: "#a6e3a1",
-  cacheWrite: "#cba6f7",
-};
 
 export function TokenChart({ history }: Props) {
   if (history.length === 0) {
@@ -61,10 +54,10 @@ export function TokenChart({ history }: Props) {
         <Legend
           wrapperStyle={{ color: "#cdd6f4", fontSize: 12, fontFamily: "'Outfit', system-ui" }}
         />
-        <Bar dataKey="input" stackId="tokens" fill={COLORS.input} name="Input" radius={[0, 0, 0, 0]} />
-        <Bar dataKey="output" stackId="tokens" fill={COLORS.output} name="Output" />
-        <Bar dataKey="cacheRead" stackId="tokens" fill={COLORS.cacheRead} name="Cache Read" />
-        <Bar dataKey="cacheWrite" stackId="tokens" fill={COLORS.cacheWrite} name="Cache Write" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="input" stackId="tokens" fill={chartColors.input} name="Input" radius={[0, 0, 0, 0]} />
+        <Bar dataKey="output" stackId="tokens" fill={chartColors.output} name="Output" />
+        <Bar dataKey="cacheRead" stackId="tokens" fill={chartColors.cacheRead} name="Cache Read" />
+        <Bar dataKey="cacheWrite" stackId="tokens" fill={chartColors.cacheWrite} name="Cache Write" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );

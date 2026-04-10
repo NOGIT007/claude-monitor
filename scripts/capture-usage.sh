@@ -5,7 +5,7 @@
 # Reads JSON from stdin (same input as statusline-command.sh).
 # Runs silently in background to not block the status line.
 
-DB="$HOME/code/claude-monitoring/data/monitor.db"
+DB="${CLAUDE_MONITOR_DB:-$HOME/code/claude-monitoring/data/monitor.db}"
 [ ! -f "$DB" ] && exit 0
 
 input=$(cat)
@@ -30,7 +30,18 @@ if [ -f "$LOCK" ]; then
 fi
 touch "$LOCK"
 
-# Insert into SQLite (usage_snapshots table if it exists, otherwise create it)
+# Sanitize inputs: strip any characters that could break SQL strings
+sanitize() { printf '%s' "$1" | tr -d "'\"\\\n\r"; }
+
+s_session_id=$(sanitize "$session_id")
+s_model=$(sanitize "$model")
+s_effort=$(sanitize "$effort")
+
+# Use null for empty numeric values, sanitized strings for text
+ctx_val="${context_pct:-null}"
+s5h_val="${rl_5h:-null}"
+s7d_val="${rl_7d:-null}"
+
 sqlite3 "$DB" <<SQL
 CREATE TABLE IF NOT EXISTS usage_snapshots (
   captured_at TEXT NOT NULL DEFAULT (datetime('now')),
@@ -42,5 +53,5 @@ CREATE TABLE IF NOT EXISTS usage_snapshots (
   weekly_pct REAL
 );
 INSERT INTO usage_snapshots (session_id, model, effort, context_pct, session_pct, weekly_pct)
-VALUES ('${session_id}', '${model}', '${effort}', ${context_pct:-null}, ${rl_5h:-null}, ${rl_7d:-null});
+VALUES ('${s_session_id}', '${s_model}', '${s_effort}', ${ctx_val}, ${s5h_val}, ${s7d_val});
 SQL

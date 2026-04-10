@@ -30,7 +30,7 @@ function DesktopIcon() {
 }
 
 export function SessionCard({ sessionId, projectPath, model, entrypoint, elapsedMs, totals }: ActiveSession) {
-  const projectName = projectPath.split("/").pop() || projectPath;
+  const projectName = projectPath?.split("/").pop() || projectPath || "unknown";
   const isRecent = elapsedMs < 60_000;
 
   return (

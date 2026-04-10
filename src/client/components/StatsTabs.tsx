@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import type { PeriodStats, Comparison } from "../types";
 import { SummaryCards } from "./SummaryCards";
 
@@ -20,29 +20,31 @@ export function StatsTabs({ onStatsChange, onPeriodChange }: Props) {
   const [stats, setStats] = useState<PeriodStats | null>(null);
   const [comparison, setComparison] = useState<Comparison | null>(null);
   const [loading, setLoading] = useState(false);
-  const onStatsChangeRef = useRef(onStatsChange);
-  onStatsChangeRef.current = onStatsChange;
-  const onPeriodChangeRef = useRef(onPeriodChange);
-  onPeriodChangeRef.current = onPeriodChange;
 
   useEffect(() => {
     setLoading(true);
     Promise.all([
-      fetch(`/api/stats/${active}`).then((r) => r.json()),
-      fetch(`/api/stats/comparison?period=${active}`).then((r) => r.json()),
+      fetch(`/api/stats/${active}`).then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      }),
+      fetch(`/api/stats/comparison?period=${active}`).then((r) => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.json();
+      }),
     ])
       .then(([statsData, compData]: [PeriodStats, Comparison]) => {
         setStats(statsData);
         setComparison(compData);
-        onStatsChangeRef.current(statsData);
+        onStatsChange(statsData);
       })
-      .catch(() => {})
+      .catch((err) => console.warn("[StatsTabs] fetch failed:", err.message))
       .finally(() => setLoading(false));
-  }, [active]);
+  }, [active, onStatsChange]);
 
   useEffect(() => {
-    onPeriodChangeRef.current?.(active);
-  }, [active]);
+    onPeriodChange?.(active);
+  }, [active, onPeriodChange]);
 
   return (
     <div>

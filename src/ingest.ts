@@ -33,17 +33,24 @@ export function processLine(db: Database, line: string): SessionUpdate | null {
   const sessionId: string = entry.sessionId;
   const timestamp: string = entry.timestamp;
   const cwd: string = entry.cwd ?? "";
-  const model: string = entry.message.model ?? "claude-sonnet-4-6";
+  const rawModel: string | undefined = entry.message.model;
+  if (!rawModel) {
+    console.warn("[ingest] Missing model in entry, defaulting to claude-sonnet-4-6");
+  }
+  const model: string = rawModel ?? "claude-sonnet-4-6";
 
   const input = usage.input_tokens ?? 0;
   const output = usage.output_tokens ?? 0;
   const cacheWrite = usage.cache_creation_input_tokens ?? 0;
   const cacheRead = usage.cache_read_input_tokens ?? 0;
 
+  const content: any[] = entry?.message?.content ?? [];
+  const thinkingTurns = content.filter((c: any) => c.type === "thinking").length;
+
   const cost = calculateCost(model, input, output, cacheWrite, cacheRead);
 
   upsertSession(db, sessionId, cwd, model, timestamp);
-  insertTokenUsage(db, sessionId, timestamp, input, output, cacheWrite, cacheRead, cost);
+  insertTokenUsage(db, sessionId, timestamp, input, output, cacheWrite, cacheRead, cost, thinkingTurns);
 
   return {
     sessionId,

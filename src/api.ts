@@ -6,12 +6,19 @@ import {
   getProjectStats,
   getModelStats,
   getPeakHours,
+  getPeakHoursByPeriod,
   getSessionsSummary,
   getComparison,
+  getActivityHeatmap,
   getCostHistory,
   getCumulativeCost,
   getSessionHistory,
   getUsageSnapshots,
+  getThinkingDepth,
+  getRateLimitTimeline,
+  getStopoutEvents,
+  getSessionBurnRates,
+  getRateLimitStats,
 } from "./db";
 
 type StatsPeriod = "today" | "week" | "month";
@@ -26,7 +33,7 @@ function parsePeriod(url: URL): StatsPeriod | null {
 function parseDays(url: URL): number | null {
   const daysParam = url.searchParams.get("days");
   const days = daysParam ? parseInt(daysParam, 10) : 30;
-  return isNaN(days) || days <= 0 ? null : days;
+  return isNaN(days) || days <= 0 || days > 365 ? null : days;
 }
 
 function json(data: unknown, status = 200): Response {
@@ -36,7 +43,11 @@ function json(data: unknown, status = 200): Response {
   });
 }
 
-export function handleApiRequest(req: Request, db: Database): Response | null {
+export interface ApiOptions {
+  sessionsDir?: string;
+}
+
+export function handleApiRequest(req: Request, db: Database, options?: ApiOptions): Response | null {
   const url = new URL(req.url);
   const { pathname } = url;
 
@@ -45,7 +56,7 @@ export function handleApiRequest(req: Request, db: Database): Response | null {
   }
 
   if (pathname === "/api/sessions") {
-    const sessions = getActiveSessions(db).map((s) => ({
+    const sessions = getActiveSessions(db, 30, options?.sessionsDir).map((s) => ({
       sessionId: s.session_id,
       projectPath: s.project_path,
       model: s.model,
@@ -75,6 +86,11 @@ export function handleApiRequest(req: Request, db: Database): Response | null {
   }
 
   if (pathname === "/api/stats/peak-hours") {
+    const periodParam = url.searchParams.get("period");
+    if (periodParam) {
+      if (!VALID_PERIODS.has(periodParam)) return json({ error: "Invalid period" }, 400);
+      return json(getPeakHoursByPeriod(db, periodParam as StatsPeriod));
+    }
     const days = parseDays(url);
     if (!days) return json({ error: "Invalid days parameter" }, 400);
     return json(getPeakHours(db, days));
@@ -113,6 +129,29 @@ export function handleApiRequest(req: Request, db: Database): Response | null {
     return json(getComparison(db, period));
   }
 
+  if (pathname === "/api/stats/thinking-depth") {
+    const period = parsePeriod(url);
+    if (!period) return json({ error: "Invalid period" }, 400);
+    return json(getThinkingDepth(db, period));
+  }
+
+  if (pathname === "/api/stats/activity-heatmap") {
+    const weeks = parseInt(url.searchParams.get("weeks") || "52", 10);
+    if (isNaN(weeks) || weeks <= 0 || weeks > 104) return json({ error: "Invalid weeks (1-104)" }, 400);
+    return json(getActivityHeatmap(db, weeks));
+  }
+
+  if (pathname === "/api/stats/rate-limits") {
+    const hours = Math.min(parseInt(url.searchParams.get("hours") || "24", 10) || 24, 720);
+    const threshold = Math.min(parseInt(url.searchParams.get("threshold") || "80", 10) || 80, 100);
+    return json({
+      stats: getRateLimitStats(db),
+      timeline: getRateLimitTimeline(db, hours),
+      stopouts: getStopoutEvents(db, threshold),
+      burnRates: getSessionBurnRates(db),
+    });
+  }
+
   if (pathname.startsWith("/api/stats/")) {
     const period = pathname.slice("/api/stats/".length);
     if (!VALID_PERIODS.has(period)) {
@@ -122,7 +161,7 @@ export function handleApiRequest(req: Request, db: Database): Response | null {
   }
 
   if (pathname === "/api/usage-snapshots") {
-    const limit = parseInt(url.searchParams.get("limit") || "50", 10);
+    const limit = Math.min(parseInt(url.searchParams.get("limit") || "50", 10) || 50, 500);
     return json(getUsageSnapshots(db, limit));
   }
 

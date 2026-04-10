@@ -1,7 +1,12 @@
-export const PRICING: Record<
-  string,
-  { input: number; output: number; cacheWrite: number; cacheRead: number }
-> = {
+export interface ModelPricing {
+  input: number;
+  output: number;
+  cacheWrite: number;
+  cacheRead: number;
+}
+
+/** Per-million token pricing. Override via CLAUDE_MONITOR_PRICING env (JSON). */
+const DEFAULT_PRICING: Record<string, ModelPricing> = {
   "claude-sonnet-4-6": {
     input: 3.0,
     output: 15.0,
@@ -21,6 +26,21 @@ export const PRICING: Record<
     cacheRead: 0.08,
   },
 };
+
+function loadPricing(): Record<string, ModelPricing> {
+  const envPricing = process.env.CLAUDE_MONITOR_PRICING;
+  if (envPricing) {
+    try {
+      const custom = JSON.parse(envPricing) as Record<string, ModelPricing>;
+      return { ...DEFAULT_PRICING, ...custom };
+    } catch {
+      console.warn("[pricing] Invalid CLAUDE_MONITOR_PRICING JSON, using defaults");
+    }
+  }
+  return DEFAULT_PRICING;
+}
+
+export const PRICING = loadPricing();
 
 const DEFAULT_MODEL = "claude-sonnet-4-6";
 

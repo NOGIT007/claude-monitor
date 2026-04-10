@@ -36,12 +36,11 @@ export function formatDuration(ms: number): string {
 }
 
 export function formatHour(hour: number): string {
-  if (hour === 0) return "12am";
-  if (hour < 12) return `${hour}am`;
-  if (hour === 12) return "12pm";
-  return `${hour - 12}pm`;
+  const h = Math.max(0, Math.min(23, Math.floor(hour)));
+  return `${String(h).padStart(2, "0")}:00`;
 }
 
-export function projectName(path: string): string {
+export function projectName(path: string | undefined): string {
+  if (!path) return "unknown";
   return path.split("/").pop() || path;
 }

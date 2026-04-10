@@ -15,10 +15,18 @@ const TRACES_PATH = join(DATA_DIR, "otel_traces.ndjson");
 
 mkdirSync(DATA_DIR, { recursive: true });
 
+function safeTimestamp(nanoStr: string | undefined): string {
+  if (!nanoStr) return new Date().toISOString();
+  const ms = Number(nanoStr) / 1e6;
+  if (isNaN(ms)) return new Date().toISOString();
+  return new Date(ms).toISOString();
+}
+
 function flattenAttributes(attrs: any[]): Record<string, any> {
   const result: Record<string, any> = {};
   if (!Array.isArray(attrs)) return result;
   for (const attr of attrs) {
+    if (!attr || !attr.key) continue;
     const key = attr.key;
     const val = attr.value;
     if (!val) continue;
@@ -47,9 +55,7 @@ function processMetrics(body: any): number {
         for (const dp of dataPoints) {
           const attrs = flattenAttributes(dp.attributes ?? []);
           const record = {
-            timestamp: dp.timeUnixNano
-              ? new Date(Number(dp.timeUnixNano) / 1e6).toISOString()
-              : new Date().toISOString(),
+            timestamp: safeTimestamp(dp.timeUnixNano),
             metric: name,
             value: dp.asDouble ?? dp.asInt ?? dp.value ?? 0,
             ...resourceAttrs,
@@ -75,9 +81,7 @@ function processLogs(body: any): number {
         const eventName = attrs["event.name"] ?? "unknown";
 
         const record = {
-          timestamp: log.timeUnixNano
-            ? new Date(Number(log.timeUnixNano) / 1e6).toISOString()
-            : new Date().toISOString(),
+          timestamp: safeTimestamp(log.timeUnixNano),
           event: eventName,
           severity: log.severityText ?? "",
           ...resourceAttrs,
@@ -116,12 +120,8 @@ function processTraces(body: any): number {
           parent_span_id: span.parentSpanId ?? "",
           name: span.name ?? "",
           kind: span.kind ?? 0,
-          start_time: span.startTimeUnixNano
-            ? new Date(Number(span.startTimeUnixNano) / 1e6).toISOString()
-            : "",
-          end_time: span.endTimeUnixNano
-            ? new Date(Number(span.endTimeUnixNano) / 1e6).toISOString()
-            : "",
+          start_time: span.startTimeUnixNano ? safeTimestamp(span.startTimeUnixNano) : "",
+          end_time: span.endTimeUnixNano ? safeTimestamp(span.endTimeUnixNano) : "",
           duration_ms: span.startTimeUnixNano && span.endTimeUnixNano
             ? (Number(span.endTimeUnixNano) - Number(span.startTimeUnixNano)) / 1e6
             : 0,
@@ -141,29 +141,29 @@ const port = parseInt(process.env.OTEL_PORT || "4318", 10);
 
 const server = Bun.serve({
   port,
-  fetch(req) {
+  async fetch(req) {
     const url = new URL(req.url);
 
     // OTLP HTTP endpoints
     if (req.method === "POST") {
-      return req.json().then((body) => {
-        let count = 0;
+      try {
+        const body = await req.json();
 
         if (url.pathname === "/v1/metrics") {
-          count = processMetrics(body);
+          processMetrics(body);
         } else if (url.pathname === "/v1/logs") {
-          count = processLogs(body);
+          processLogs(body);
         } else if (url.pathname === "/v1/traces") {
-          count = processTraces(body);
+          processTraces(body);
         } else {
           return new Response("Not found", { status: 404 });
         }
 
         return Response.json({ partialSuccess: {} });
-      }).catch((err) => {
+      } catch (err) {
         console.error("[otel] Parse error:", err);
         return new Response("Bad request", { status: 400 });
-      });
+      }
     }
 
     // Health check
