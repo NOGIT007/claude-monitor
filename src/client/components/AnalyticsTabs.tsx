@@ -35,16 +35,22 @@ export function AnalyticsTabs({ period, currentStats, history }: Props) {
 
   const switchTab = useCallback((key: AnalyticsTab) => {
     setActive(key);
-    // After React re-renders, scroll the tab bar back into view
-    requestAnimationFrame(() => {
-      tabBarRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
   }, []);
 
   return (
     <div>
-      {/* Tab buttons */}
-      <div ref={tabBarRef} style={{ display: "flex", gap: "0.5rem", marginBottom: "1.5rem" }}>
+      {/* Tab buttons — sticky so they stay visible when switching */}
+      <div ref={tabBarRef} style={{
+        display: "flex",
+        gap: "0.5rem",
+        marginBottom: "1.5rem",
+        position: "sticky",
+        top: 0,
+        zIndex: 10,
+        background: "var(--ctp-base)",
+        paddingTop: "0.75rem",
+        paddingBottom: "0.75rem",
+      }}>
         {tabs.map(({ key, label }) => (
           <button
             key={key}
@@ -57,100 +63,98 @@ export function AnalyticsTabs({ period, currentStats, history }: Props) {
       </div>
 
       {/* Token Analytics */}
-      {active === "tokens" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          <ActivityHeatmap />
+      <div style={{ display: active === "tokens" ? "flex" : "none", flexDirection: "column", gap: "1.5rem" }}>
+        <ActivityHeatmap />
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-            <Sparkline history={history} />
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+          <Sparkline history={history} />
+          {currentStats ? (
+            <TokenDistribution stats={currentStats} />
+          ) : (
+            <div className="card">
+              <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>
+                Select a period above to see distribution
+              </p>
+            </div>
+          )}
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
+          <div className="card">
+            <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
+              Token History
+            </h3>
+            <TokenChart history={history} />
+          </div>
+          <div className="card">
+            <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
+              Token Breakdown
+            </h3>
             {currentStats ? (
-              <TokenDistribution stats={currentStats} />
+              <BreakdownChart stats={currentStats} />
             ) : (
-              <div className="card">
-                <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>
-                  Select a period above to see distribution
-                </p>
-              </div>
+              <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>
+                Select a period above to see breakdown
+              </p>
             )}
           </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-            <div className="card">
-              <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
-                Token History
-              </h3>
-              <TokenChart history={history} />
-            </div>
-            <div className="card">
-              <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
-                Token Breakdown
-              </h3>
-              {currentStats ? (
-                <BreakdownChart stats={currentStats} />
-              ) : (
-                <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>
-                  Select a period above to see breakdown
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="card">
-            <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
-              Model Breakdown
-            </h3>
-            <ModelBreakdown period={period} />
-          </div>
         </div>
-      )}
+
+        <div className="card">
+          <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
+            Model Breakdown
+          </h3>
+          <ModelBreakdown period={period} />
+        </div>
+      </div>
 
       {/* Workflow Intelligence */}
-      {active === "workflow" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          <div className="card">
-            <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
-              Peak Hours
-            </h3>
-            <PeakHours period={period} />
-          </div>
-
-          <div className="card">
-            <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
-              Cost per Project
-            </h3>
-            <ProjectCosts period={period} />
-          </div>
-
-          <div className="card">
-            <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
-              Session History
-            </h3>
-            <SessionHistory period={period} />
-          </div>
+      <div style={{ display: active === "workflow" ? "flex" : "none", flexDirection: "column", gap: "1.5rem" }}>
+        <div className="card">
+          <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
+            Peak Hours
+          </h3>
+          <PeakHours period={period} />
         </div>
-      )}
+
+        <div className="card">
+          <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
+            Cost per Project
+          </h3>
+          <ProjectCosts period={period} />
+        </div>
+
+        <div className="card">
+          <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
+            Session History
+          </h3>
+          <SessionHistory period={period} />
+        </div>
+      </div>
 
       {/* Productivity Analytics */}
-      {active === "productivity" && (
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-          <SessionStats period={period} />
+      <div style={{ display: active === "productivity" ? "flex" : "none", flexDirection: "column", gap: "1.5rem" }}>
+        <SessionStats period={period} />
 
-          <EfficiencyMetrics stats={currentStats} />
+        <EfficiencyMetrics stats={currentStats} />
 
-          <div className="card">
-            <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
-              Cost Trend
-            </h3>
-            <CostTrendChart />
-          </div>
+        <div className="card">
+          <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
+            Cost Trend
+          </h3>
+          <CostTrendChart />
         </div>
-      )}
+      </div>
 
       {/* Thinking Depth */}
-      {active === "thinking" && <ThinkingDepth period={period} />}
+      <div style={{ display: active === "thinking" ? "block" : "none" }}>
+        <ThinkingDepth period={period} />
+      </div>
 
       {/* Rate Limits */}
-      {active === "ratelimits" && <RateLimitAnalytics />}
+      <div style={{ display: active === "ratelimits" ? "block" : "none" }}>
+        <RateLimitAnalytics />
+      </div>
     </div>
   );
 }

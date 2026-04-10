@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.1] - 2026-04-10
+
+### Fixed
+- Analytics tabs no longer bounce/shift when switching — tab bar is sticky and panels use display toggle instead of mount/unmount
+- Weekly limit rate bar now shows correct percentage instead of 0% when latest snapshot has no weekly data
+- SQLite "database is locked" errors resolved with `PRAGMA busy_timeout = 5000`
+
+### Added
+- Dev workflow section in CLAUDE.md documenting Monitor tool usage and port 4500 convention
+
 ## [1.2.0] - 2026-04-10
 
 ### Added

@@ -65,40 +65,33 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           NEW_VERSION: ${{ steps.version.outputs.new }}
         run: |
-          DATE=$(date +%Y-%m-%d)
+          export DATE=$(date +%Y-%m-%d)
 
           # Extract Summary section from PR body if present
-          SUMMARY=$(echo "$PR_BODY" | sed -n '/^## Summary/,/^##/p' | grep '^\s*-' | head -10)
+          export SUMMARY=$(echo "$PR_BODY" | sed -n '/^## Summary/,/^##/p' | grep '^\s*-' | head -10)
           if [ -z "$SUMMARY" ]; then
-            SUMMARY="- ${PR_TITLE}"
+            export SUMMARY="- ${PR_TITLE}"
           fi
 
           # Build new changelog entry using python to avoid sed escaping issues
-          python3 -c "
-          import sys
-          version = sys.argv[1]
-          date = sys.argv[2]
-          summary = sys.argv[3]
-          pr_num = sys.argv[4]
-          pr_url = sys.argv[5]
+          python3 << 'PYEOF'
+          import sys, os
+          version = os.environ["NEW_VERSION"]
+          date = os.environ.get("DATE", "")
+          summary = os.environ.get("SUMMARY", "")
+          pr_num = os.environ["PR_NUMBER"]
+          pr_url = os.environ["PR_URL"]
 
-          entry = f'''
-## [{version}] - {date}
+          entry = f"\n## [{version}] - {date}\n\n### Changed\n{summary}\n\n_PR [#{pr_num}]({pr_url})_\n"
 
-### Changed
-{summary}
-
-_PR [#{pr_num}]({pr_url})_
-'''
-
-          with open('CHANGELOG.md', 'r') as f:
+          with open("CHANGELOG.md", "r") as f:
               content = f.read()
 
-          content = content.replace('# Changelog\n', '# Changelog\n' + entry, 1)
+          content = content.replace("# Changelog\n", "# Changelog\n" + entry, 1)
 
-          with open('CHANGELOG.md', 'w') as f:
+          with open("CHANGELOG.md", "w") as f:
               f.write(content)
-          " "$NEW_VERSION" "$DATE" "$SUMMARY" "$PR_NUMBER" "$PR_URL"
+          PYEOF
 
       - name: Commit and tag
         env:
@@ -126,16 +119,13 @@ _PR [#{pr_num}]({pr_url})_
             SUMMARY="- ${PR_TITLE}"
           fi
 
-          NOTES=$(cat <<NOTESEOF
-          ## What's Changed
+          NOTES="## What's Changed
 
           ${SUMMARY}
 
           **PR:** [#${PR_NUMBER}](${PR_URL})
 
-          **Full Changelog:** https://github.com/${REPO}/compare/v${OLD_VERSION}...v${NEW_VERSION}
-          NOTESEOF
-          )
+          **Full Changelog:** https://github.com/${REPO}/compare/v${OLD_VERSION}...v${NEW_VERSION}"
 
           gh release create "v${NEW_VERSION}" \
             --title "v${NEW_VERSION}" \

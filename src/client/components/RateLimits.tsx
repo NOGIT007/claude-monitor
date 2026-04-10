@@ -102,8 +102,9 @@ export function RateLimits() {
     );
   }
 
-  // Show the most recent snapshot
+  // Show the most recent snapshot, but for weekly_pct use the most recent non-null value
   const latest = snapshots[0];
+  const weeklyPct = snapshots.find((s) => s.weekly_pct != null)?.weekly_pct ?? null;
   const time = new Date(latest.captured_at + "Z").toLocaleTimeString([], {
     hour: "2-digit",
     minute: "2-digit",
@@ -113,7 +114,7 @@ export function RateLimits() {
     <div>
       <div style={{ display: "flex", gap: "1.5rem", marginBottom: "0.75rem" }}>
         <Bar pct={latest.session_pct} label="Current Session" />
-        <Bar pct={latest.weekly_pct} label="Weekly Limit" />
+        <Bar pct={weeklyPct} label="Weekly Limit" />
         <Bar pct={latest.context_pct} label="Context Window" />
       </div>
       <div

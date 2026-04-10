@@ -37,6 +37,20 @@ bun test src/db.test.ts  # Run single test file
 - PORT env var controls server port (default 3000)
 - `start.sh` auto-kills existing instance before starting — never bails
 
+## Dev Workflow
+
+When working on this project, use the Monitor tool to stream server errors in real-time:
+
+```
+# Start server in background, then monitor its output for errors
+kill $(lsof -ti :4500) 2>/dev/null
+PORT=4500 bun run src/server.ts 2>&1 | grep --line-buffered -iE "error|exception|fail|warn|panic" 
+```
+
+- Always run the server on port 4500 (not default 3000)
+- After code changes, restart the server and re-attach the monitor
+- Use `Monitor` (persistent, streaming) for log tailing — not `Bash run_in_background`
+
 ## Code Style
 
 - TypeScript strict mode, ESNext target
