@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   BarChart,
   Bar,
@@ -27,6 +27,113 @@ const TOOL_COLORS = [
   "var(--ctp-pink)",
 ];
 
+const overlayStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  background: "rgba(0,0,0,0.6)",
+  backdropFilter: "blur(4px)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  zIndex: 1000,
+};
+
+const panelStyle: React.CSSProperties = {
+  background: "var(--ctp-mantle, #181825)",
+  border: "1px solid rgba(69,71,90,0.5)",
+  borderRadius: 16,
+  padding: "2rem",
+  maxWidth: 640,
+  width: "90vw",
+  maxHeight: "80vh",
+  overflowY: "auto",
+  color: "var(--ctp-text)",
+  fontFamily: "'Outfit', system-ui, sans-serif",
+  lineHeight: 1.6,
+};
+
+const headingStyle: React.CSSProperties = {
+  margin: "1.25rem 0 0.5rem",
+  fontSize: "0.95rem",
+  fontWeight: 700,
+  color: "var(--ctp-lavender, #b4befe)",
+};
+
+const paraStyle: React.CSSProperties = {
+  margin: "0 0 0.5rem",
+  fontSize: "0.85rem",
+  color: "var(--ctp-subtext1, #bac2de)",
+};
+
+function Explainer({ onClose }: { onClose: () => void }) {
+  return (
+    <div style={overlayStyle} onClick={onClose}>
+      <div style={panelStyle} onClick={(e) => e.stopPropagation()}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <h2 style={{ margin: 0, fontSize: "1.15rem", fontWeight: 700 }}>Understanding Tool Usage</h2>
+          <button
+            onClick={onClose}
+            style={{ background: "none", border: "none", color: "var(--ctp-subtext0)", cursor: "pointer", fontSize: "1.2rem", padding: "0.2rem 0.4rem", lineHeight: 1 }}
+          >
+            ✕
+          </button>
+        </div>
+
+        <h3 style={headingStyle}>What is this?</h3>
+        <p style={paraStyle}>
+          This tab tracks every tool Claude Code calls during your sessions &mdash; reads, writes,
+          shell commands, searches, and more. Data comes from OpenTelemetry (OTEL) spans emitted
+          by the Claude Code CLI.
+        </p>
+
+        <h3 style={headingStyle}>How does it work?</h3>
+        <p style={paraStyle}>
+          Claude Code sends OTEL spans to <code style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>http://localhost:4318</code> (the
+          standard OTLP port). The monitor ingests them in real-time and stores tool call details
+          in SQLite. No data leaves your machine.
+        </p>
+
+        <h3 style={headingStyle}>Enabling tracing</h3>
+        <p style={paraStyle}>
+          Tool details are only emitted when these environment variables are set in the shell where
+          you run <code style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>claude</code>:
+        </p>
+        <pre style={{ background: "var(--ctp-surface0)", borderRadius: 8, padding: "0.75rem 1rem", fontSize: "0.78rem", fontFamily: "var(--font-mono)", color: "var(--ctp-green)", margin: "0 0 0.75rem", overflowX: "auto" }}>
+{`export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"
+export OTEL_LOG_TOOL_DETAILS=true
+export OTEL_LOG_TOOL_CONTENT=true   # optional: capture input/output
+export OTEL_LOG_USER_PROMPTS=true   # optional: capture prompt text`}
+        </pre>
+        <p style={paraStyle}>
+          The easiest way: add <code style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>source ~/.claude-monitor.env</code> to
+          your <code style={{ fontFamily: "var(--font-mono)", fontSize: "0.8rem" }}>~/.zshrc</code>. The monitor writes this file on every start.
+        </p>
+
+        <h3 style={headingStyle}>What the charts show</h3>
+        <p style={paraStyle}>
+          <strong>Tool Calls by Type</strong> — horizontal bar chart ranked by call count. The inline
+          text shows average execution time and error rate per tool.
+        </p>
+        <p style={paraStyle}>
+          <strong>Tool Calls Over Time</strong> — stacked area chart showing when tools were used
+          across the selected period (hourly for Today, daily for Week/Month).
+        </p>
+        <p style={paraStyle}>
+          <strong>Prompt Analytics</strong> — counts interactions (user messages) and their average
+          length, giving you a sense of session density.
+        </p>
+
+        <h3 style={headingStyle}>Common tools</h3>
+        <p style={paraStyle}>
+          <strong>Bash</strong> — shell commands &nbsp;·&nbsp; <strong>Read</strong> — file reads &nbsp;·&nbsp;
+          <strong>Write/Edit</strong> — file writes &nbsp;·&nbsp; <strong>Grep/Glob</strong> — search &nbsp;·&nbsp;
+          <strong>Agent</strong> — subagent dispatches &nbsp;·&nbsp; <strong>Skill/ToolSearch</strong> — skill invocations
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /** Strip common OTEL prefixes so labels are short and readable */
 function shortName(name: string): string {
   return name
@@ -40,6 +147,9 @@ export function ToolUsageChart({ period }: Props) {
   const [toolStats, setToolStats] = useState<ToolStatsResult | null>(null);
   const [timeline, setTimeline] = useState<ToolTimelineEntry[]>([]);
   const [promptStats, setPromptStats] = useState<PromptStatsResult | null>(null);
+  const [showExplainer, setShowExplainer] = useState(false);
+  const openExplainer = useCallback(() => setShowExplainer(true), []);
+  const closeExplainer = useCallback(() => setShowExplainer(false), []);
 
   useEffect(() => {
     fetch(`/api/stats/tools?period=${period}`)
@@ -58,12 +168,40 @@ export function ToolUsageChart({ period }: Props) {
       .catch(() => setPromptStats(null));
   }, [period]);
 
+  const explainerBtn = (
+    <div style={{ display: "flex", justifyContent: "flex-end" }}>
+      <button
+        onClick={openExplainer}
+        style={{
+          background: "rgba(69,71,90,0.3)",
+          border: "1px solid rgba(69,71,90,0.5)",
+          borderRadius: 8,
+          padding: "0.4rem 0.8rem",
+          color: "var(--ctp-subtext0)",
+          cursor: "pointer",
+          fontSize: "0.8rem",
+          fontFamily: "'Outfit', system-ui, sans-serif",
+          display: "flex",
+          alignItems: "center",
+          gap: "0.4rem",
+        }}
+      >
+        <span style={{ fontSize: "1rem", lineHeight: 1 }}>?</span>
+        What is this?
+      </button>
+    </div>
+  );
+
   if (!toolStats || toolStats.tools.length === 0) {
     return (
-      <div className="card">
-        <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>
-          No OTEL tool data yet. Enable tracing with OTEL_LOG_TOOL_DETAILS=true to see tool analytics.
-        </p>
+      <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+        {explainerBtn}
+        {showExplainer && <Explainer onClose={closeExplainer} />}
+        <div className="card">
+          <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>
+            No OTEL tool data yet. Enable tracing with <code style={{ fontFamily: "var(--font-mono)" }}>OTEL_LOG_TOOL_DETAILS=true</code> — click "What is this?" for setup instructions.
+          </p>
+        </div>
       </div>
     );
   }
@@ -88,6 +226,8 @@ export function ToolUsageChart({ period }: Props) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      {explainerBtn}
+      {showExplainer && <Explainer onClose={closeExplainer} />}
       {/* Summary cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
         <div className="card" style={{ textAlign: "center" }}>
