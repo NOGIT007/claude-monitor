@@ -14,6 +14,7 @@ import { EfficiencyMetrics } from "./EfficiencyMetrics";
 import { CostTrendChart } from "./CostTrendChart";
 import { ThinkingDepth } from "./ThinkingDepth";
 import { RateLimitAnalytics } from "./RateLimitAnalytics";
+import { ToolUsageChart } from "./ToolUsageChart";
 
 const tabs: { key: AnalyticsTab; label: string }[] = [
   { key: "tokens", label: "Token Analytics" },
@@ -21,6 +22,7 @@ const tabs: { key: AnalyticsTab; label: string }[] = [
   { key: "productivity", label: "Productivity Analytics" },
   { key: "thinking", label: "Thinking Depth" },
   { key: "ratelimits", label: "Rate Limits" },
+  { key: "tools", label: "Tool Usage" },
 ];
 
 interface Props {
@@ -154,6 +156,11 @@ export function AnalyticsTabs({ period, currentStats, history }: Props) {
       {/* Rate Limits */}
       <div style={{ display: active === "ratelimits" ? "block" : "none" }}>
         <RateLimitAnalytics />
+      </div>
+
+      {/* Tool Usage */}
+      <div style={{ display: active === "tools" ? "block" : "none" }}>
+        <ToolUsageChart period={period} />
       </div>
     </div>
   );

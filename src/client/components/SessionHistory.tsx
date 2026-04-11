@@ -1,6 +1,7 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import type { SessionHistoryEntry } from "../types";
 import { formatNumber, formatCost, formatElapsed, projectName } from "../format";
+import { SessionDrillDown } from "./SessionDrillDown";
 
 interface Props {
   period: "today" | "week" | "month";
@@ -82,6 +83,7 @@ export function SessionHistory({ period }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [page, setPage] = useState(0);
+  const [expandedSession, setExpandedSession] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/stats/session-history?period=${period}`)
@@ -200,9 +202,11 @@ export function SessionHistory({ period }: Props) {
           </thead>
           <tbody>
             {pageData.map((s) => (
+              <React.Fragment key={s.sessionId}>
               <tr
-                key={s.sessionId}
                 className="session-row"
+                onClick={() => setExpandedSession(expandedSession === s.sessionId ? null : s.sessionId)}
+                style={{ cursor: "pointer" }}
               >
                 <td style={{ ...cellStyle, textAlign: "left", color: "var(--ctp-subtext1)" }}>
                   <span>{formatDate(s.startedAt)}</span>{" "}
@@ -263,6 +267,14 @@ export function SessionHistory({ period }: Props) {
                   {formatCost(s.costUsd)}
                 </td>
               </tr>
+              {expandedSession === s.sessionId && (
+                <tr>
+                  <td colSpan={10} style={{ padding: 0, borderTop: "none" }}>
+                    <SessionDrillDown sessionId={s.sessionId} />
+                  </td>
+                </tr>
+              )}
+              </React.Fragment>
             ))}
           </tbody>
         </table>
