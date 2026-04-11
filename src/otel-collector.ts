@@ -142,11 +142,11 @@ function processTraces(db: Database, body: any): number {
           attributes: JSON.stringify(spanAttrs),
         });
 
-        // Extract tool call only when tool.name attribute is present (set by OTEL_LOG_TOOL_DETAILS=true).
-        // Don't fall back to span.name — sub-spans like claude_code.tool.execution and
-        // claude_code.tool.blocked_on_user would otherwise be counted as separate tool calls.
-        if (spanAttrs["tool.name"] !== undefined) {
-          const toolName: string = String(spanAttrs["tool.name"]);
+        // Extract tool call from "claude_code.tool" root spans only.
+        // Sub-spans are "claude_code.tool.execution" / "claude_code.tool.blocked_on_user".
+        // Claude Code uses the attribute key "tool_name" (underscore, not dot).
+        if (span.name === "claude_code.tool" && spanAttrs["tool_name"] !== undefined) {
+          const toolName: string = String(spanAttrs["tool_name"]);
           const inputSummary = String(spanAttrs["tool.input"] ?? "").slice(0, 1000);
           const outputSummary = String(spanAttrs["tool.output"] ?? "").slice(0, 1000);
 
@@ -162,10 +162,11 @@ function processTraces(db: Database, body: any): number {
           });
         }
 
-        // Extract prompt if span has user.prompt attribute
-        if (spanAttrs["user.prompt"] !== undefined) {
-          const promptText = String(spanAttrs["user.prompt"]).slice(0, 1000);
-          const tokenCount = Number(spanAttrs["user.prompt.token_count"] ?? 0);
+        // Extract prompt from "claude_code.interaction" spans.
+        // Claude Code uses "user_prompt" (underscore) attribute key.
+        if (span.name === "claude_code.interaction" && spanAttrs["user_prompt"] !== undefined) {
+          const promptText = String(spanAttrs["user_prompt"]).slice(0, 1000);
+          const tokenCount = Number(spanAttrs["user_prompt_length"] ?? 0);
 
           insertOtelPrompt(db, {
             spanId: span.spanId ?? "",
