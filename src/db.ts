@@ -27,6 +27,52 @@ CREATE TABLE IF NOT EXISTS token_usage (
 
 CREATE INDEX IF NOT EXISTS idx_token_usage_timestamp ON token_usage(timestamp);
 CREATE INDEX IF NOT EXISTS idx_token_usage_session   ON token_usage(session_id);
+
+CREATE TABLE IF NOT EXISTS otel_spans (
+  span_id        TEXT PRIMARY KEY,
+  trace_id       TEXT NOT NULL,
+  parent_span_id TEXT NOT NULL DEFAULT '',
+  session_id     TEXT NOT NULL DEFAULT '',
+  name           TEXT NOT NULL,
+  kind           INTEGER NOT NULL DEFAULT 0,
+  start_time     TEXT NOT NULL,
+  end_time       TEXT NOT NULL DEFAULT '',
+  duration_ms    REAL NOT NULL DEFAULT 0,
+  status         INTEGER NOT NULL DEFAULT 0,
+  attributes     TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE INDEX IF NOT EXISTS idx_otel_spans_session   ON otel_spans(session_id);
+CREATE INDEX IF NOT EXISTS idx_otel_spans_trace     ON otel_spans(trace_id);
+CREATE INDEX IF NOT EXISTS idx_otel_spans_time      ON otel_spans(start_time);
+
+CREATE TABLE IF NOT EXISTS otel_tool_calls (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  span_id        TEXT NOT NULL,
+  session_id     TEXT NOT NULL DEFAULT '',
+  tool_name      TEXT NOT NULL,
+  timestamp      TEXT NOT NULL,
+  duration_ms    REAL NOT NULL DEFAULT 0,
+  input_summary  TEXT NOT NULL DEFAULT '',
+  output_summary TEXT NOT NULL DEFAULT '',
+  status         INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_otel_tools_session ON otel_tool_calls(session_id);
+CREATE INDEX IF NOT EXISTS idx_otel_tools_name    ON otel_tool_calls(tool_name);
+CREATE INDEX IF NOT EXISTS idx_otel_tools_time    ON otel_tool_calls(timestamp);
+
+CREATE TABLE IF NOT EXISTS otel_prompts (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  span_id        TEXT NOT NULL,
+  session_id     TEXT NOT NULL DEFAULT '',
+  timestamp      TEXT NOT NULL,
+  prompt_text    TEXT NOT NULL DEFAULT '',
+  token_count    INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_otel_prompts_session ON otel_prompts(session_id);
+CREATE INDEX IF NOT EXISTS idx_otel_prompts_time    ON otel_prompts(timestamp);
 `;
 
 export function initDb(dbPath = join(import.meta.dir, "../data/monitor.db")): Database {
