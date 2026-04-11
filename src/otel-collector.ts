@@ -142,9 +142,11 @@ function processTraces(db: Database, body: any): number {
           attributes: JSON.stringify(spanAttrs),
         });
 
-        // Extract tool call if span has tool.name or name includes "tool"
-        if (spanAttrs["tool.name"] !== undefined || (span.name ?? "").includes("tool")) {
-          const toolName: string = spanAttrs["tool.name"] ?? span.name ?? "";
+        // Extract tool call only when tool.name attribute is present (set by OTEL_LOG_TOOL_DETAILS=true).
+        // Don't fall back to span.name — sub-spans like claude_code.tool.execution and
+        // claude_code.tool.blocked_on_user would otherwise be counted as separate tool calls.
+        if (spanAttrs["tool.name"] !== undefined) {
+          const toolName: string = String(spanAttrs["tool.name"]);
           const inputSummary = String(spanAttrs["tool.input"] ?? "").slice(0, 1000);
           const outputSummary = String(spanAttrs["tool.output"] ?? "").slice(0, 1000);
 
