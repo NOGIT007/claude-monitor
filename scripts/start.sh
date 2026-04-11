@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PORT="${PORT:-3000}"
+PORT="${PORT:-4500}"
 PID_FILE="$HOME/.claude-monitor.pid"
 
 # Stop existing instance if running
