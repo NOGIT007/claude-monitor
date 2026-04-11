@@ -7,3 +7,4 @@ claude-monitor
 ~/.claude-monitor.pid
 .playwright-cli/
 .superpowers/
+plans/*.png
