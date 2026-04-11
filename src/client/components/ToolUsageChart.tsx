@@ -31,6 +31,7 @@ const TOOL_COLORS = [
 function shortName(name: string): string {
   return name
     .replace(/^claude_code\.tool\./, "")
+    .replace(/^claude_code\.tool$/, "tool (generic)")
     .replace(/^claude_code\./, "")
     .replace(/_/g, " ");
 }
@@ -81,9 +82,9 @@ export function ToolUsageChart({ period }: Props) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([bucket, tools]) => ({ bucket, ...tools }));
 
-  // Y-axis width: fit the longest short label
+  // Y-axis width: fit the longest short label (monospace ~8px/char + padding)
   const maxLabelLen = Math.max(...toolsDisplay.map((t) => t.label.length));
-  const yAxisWidth = Math.min(Math.max(maxLabelLen * 7, 80), 180);
+  const yAxisWidth = Math.min(Math.max(maxLabelLen * 8 + 16, 90), 220);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
