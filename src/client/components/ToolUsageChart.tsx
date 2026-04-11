@@ -16,6 +16,13 @@ interface Props {
   period: "today" | "week" | "month";
 }
 
+type Period = "today" | "week" | "month";
+const PERIODS: { key: Period; label: string }[] = [
+  { key: "today", label: "Today" },
+  { key: "week", label: "Week" },
+  { key: "month", label: "Month" },
+];
+
 const TOOL_COLORS = [
   "var(--ctp-blue)",
   "var(--ctp-green)",
@@ -27,7 +34,8 @@ const TOOL_COLORS = [
   "var(--ctp-pink)",
 ];
 
-export function ToolUsageChart({ period }: Props) {
+export function ToolUsageChart({ period: initialPeriod }: Props) {
+  const [period, setPeriod] = useState<Period>(initialPeriod);
   const [toolStats, setToolStats] = useState<ToolStatsResult | null>(null);
   const [timeline, setTimeline] = useState<ToolTimelineEntry[]>([]);
   const [promptStats, setPromptStats] = useState<PromptStatsResult | null>(null);
@@ -49,12 +57,30 @@ export function ToolUsageChart({ period }: Props) {
       .catch(() => setPromptStats(null));
   }, [period]);
 
+  const periodSelector = (
+    <div style={{ display: "flex", gap: "0.4rem", marginBottom: "1rem" }}>
+      {PERIODS.map(({ key, label }) => (
+        <button
+          key={key}
+          onClick={() => setPeriod(key)}
+          className={`tab-btn ${period === key ? "tab-btn--active" : "tab-btn--inactive"}`}
+          style={{ fontSize: "0.7rem", padding: "0.3rem 0.75rem" }}
+        >
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
   if (!toolStats || toolStats.tools.length === 0) {
     return (
-      <div className="card">
-        <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>
-          No OTEL tool data yet. Enable tracing with OTEL_LOG_TOOL_DETAILS=true to see tool analytics.
-        </p>
+      <div>
+        {periodSelector}
+        <div className="card">
+          <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>
+            No OTEL tool data yet. Enable tracing with OTEL_LOG_TOOL_DETAILS=true to see tool analytics.
+          </p>
+        </div>
       </div>
     );
   }
@@ -72,6 +98,7 @@ export function ToolUsageChart({ period }: Props) {
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      {periodSelector}
       {/* Summary cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
         <div className="card" style={{ textAlign: "center" }}>

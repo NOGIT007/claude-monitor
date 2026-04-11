@@ -64,8 +64,9 @@ export function AnalyticsTabs({ period, currentStats, history }: Props) {
         ))}
       </div>
 
+      {/* Tab content — minHeight prevents layout bounce when switching */}
       {/* Token Analytics */}
-      <div style={{ display: active === "tokens" ? "flex" : "none", flexDirection: "column", gap: "1.5rem" }}>
+      <div style={{ display: active === "tokens" ? "flex" : "none", flexDirection: "column", gap: "1.5rem", minHeight: 400 }}>
         <ActivityHeatmap />
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
@@ -111,7 +112,7 @@ export function AnalyticsTabs({ period, currentStats, history }: Props) {
       </div>
 
       {/* Workflow Intelligence */}
-      <div style={{ display: active === "workflow" ? "flex" : "none", flexDirection: "column", gap: "1.5rem" }}>
+      <div style={{ display: active === "workflow" ? "flex" : "none", flexDirection: "column", gap: "1.5rem", minHeight: 400 }}>
         <div className="card">
           <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
             Peak Hours
@@ -135,7 +136,7 @@ export function AnalyticsTabs({ period, currentStats, history }: Props) {
       </div>
 
       {/* Productivity Analytics */}
-      <div style={{ display: active === "productivity" ? "flex" : "none", flexDirection: "column", gap: "1.5rem" }}>
+      <div style={{ display: active === "productivity" ? "flex" : "none", flexDirection: "column", gap: "1.5rem", minHeight: 400 }}>
         <SessionStats period={period} />
 
         <EfficiencyMetrics stats={currentStats} />
@@ -149,17 +150,17 @@ export function AnalyticsTabs({ period, currentStats, history }: Props) {
       </div>
 
       {/* Thinking Depth */}
-      <div style={{ display: active === "thinking" ? "block" : "none" }}>
+      <div style={{ display: active === "thinking" ? "block" : "none", minHeight: 400 }}>
         <ThinkingDepth period={period} />
       </div>
 
       {/* Rate Limits */}
-      <div style={{ display: active === "ratelimits" ? "block" : "none" }}>
+      <div style={{ display: active === "ratelimits" ? "block" : "none", minHeight: 400 }}>
         <RateLimitAnalytics />
       </div>
 
       {/* Tool Usage */}
-      <div style={{ display: active === "tools" ? "block" : "none" }}>
+      <div style={{ display: active === "tools" ? "block" : "none", minHeight: 400 }}>
         <ToolUsageChart period={period} />
       </div>
     </div>
