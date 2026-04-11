@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-PORT="${PORT:-3000}"
+PORT="${PORT:-4500}"
 PID_FILE="$HOME/.claude-monitor.pid"
 
 # Stop existing instance if running
@@ -25,18 +25,34 @@ if [[ -f "$PID_FILE" ]]; then
   rm -f "$PID_FILE"
 fi
 
+# Write OTEL env vars to a sourceable file so terminals can pick them up
+OTEL_ENV_FILE="$HOME/.claude-monitor.env"
+cat > "$OTEL_ENV_FILE" << ENVEOF
+# Source this file in your shell profile to enable Claude Monitor OTEL tracing:
+#   source ~/.claude-monitor.env
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:${PORT}"
+export OTEL_LOG_USER_PROMPTS=true
+export OTEL_LOG_TOOL_DETAILS=true
+export OTEL_LOG_TOOL_CONTENT=true
+ENVEOF
+
+# Also apply for this shell session (inherited by server process)
+# shellcheck source=/dev/null
+source "$OTEL_ENV_FILE"
+
 # Start the server
 if [[ -x "$SCRIPT_DIR/claude-monitor" ]]; then
-  PORT="$PORT" "$SCRIPT_DIR/claude-monitor" &
+  nohup env PORT="$PORT" "$SCRIPT_DIR/claude-monitor" > /dev/null 2>&1 &
 else
-  PORT="$PORT" bun run "$SCRIPT_DIR/src/server.ts" &
+  nohup env PORT="$PORT" bun run "$SCRIPT_DIR/src/server.ts" > /dev/null 2>&1 &
 fi
 
 PID=$!
+disown $PID 2>/dev/null || true
 echo "$PID" > "$PID_FILE"
 echo "Claude Monitor started on http://localhost:$PORT (PID: $PID)"
 
-# Open browser on macOS
-if command -v open &>/dev/null; then
+# Open browser on macOS (skip if launched from menu bar app)
+if [[ -z "${CLAUDE_MONITOR_NO_OPEN:-}" ]] && command -v open &>/dev/null; then
   open "http://localhost:$PORT"
 fi

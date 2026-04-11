@@ -3,7 +3,7 @@ import { startWatcher } from "./watcher";
 import { handleApiRequest } from "./api";
 import { handleWsOpen, handleWsClose, handleWsMessage } from "./ws";
 import { join, resolve } from "path";
-import "./otel-collector";
+import { handleOtelRequest } from "./otel-collector";
 
 const port = parseInt(process.env.PORT || "3000", 10);
 if (isNaN(port) || port < 1 || port > 65535) {
@@ -64,9 +64,12 @@ const indexHtml = `<!DOCTYPE html>
 
 const server = Bun.serve({
   port,
-  fetch(req, server) {
+  async fetch(req, server) {
     const apiResponse = handleApiRequest(req, db);
     if (apiResponse) return apiResponse;
+
+    const otelResponse = await handleOtelRequest(req, db);
+    if (otelResponse) return otelResponse;
 
     const url = new URL(req.url);
 
@@ -103,6 +106,23 @@ const server = Bun.serve({
     message: handleWsMessage,
   },
 });
+
+// Also accept OTEL on the standard OTLP port (4318) so Claude Code's default
+// OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 works without configuration.
+const OTEL_PORT = 4318;
+try {
+  Bun.serve({
+    port: OTEL_PORT,
+    async fetch(req) {
+      const otelResponse = await handleOtelRequest(req, db);
+      if (otelResponse) return otelResponse;
+      return new Response("Not found", { status: 404 });
+    },
+  });
+  console.log(`OTEL collector listening at http://localhost:${OTEL_PORT}`);
+} catch {
+  console.warn(`[otel] Port ${OTEL_PORT} in use — OTEL only available on port ${port}`);
+}
 
 console.log(`Claude Monitor running at http://localhost:${server.port}`);
 
