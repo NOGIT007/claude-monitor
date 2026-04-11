@@ -806,6 +806,116 @@ export interface ThinkingDepthEntry {
   avgOutputPerThinking: number;
 }
 
+// ─── OTEL Insert Interfaces & Functions ─────────────────────────────────────
+
+export interface OtelSpanInput {
+  spanId: string; traceId: string; parentSpanId: string; sessionId: string;
+  name: string; kind: number; startTime: string; endTime: string;
+  durationMs: number; status: number; attributes: string;
+}
+
+export function insertOtelSpan(db: Database, span: OtelSpanInput): void {
+  db.run(
+    `INSERT OR IGNORE INTO otel_spans (span_id, trace_id, parent_span_id, session_id, name, kind, start_time, end_time, duration_ms, status, attributes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [span.spanId, span.traceId, span.parentSpanId, span.sessionId, span.name, span.kind, span.startTime, span.endTime, span.durationMs, span.status, span.attributes],
+  );
+}
+
+export interface OtelToolCallInput {
+  spanId: string; sessionId: string; toolName: string; timestamp: string;
+  durationMs: number; inputSummary: string; outputSummary: string; status: number;
+}
+
+export function insertOtelToolCall(db: Database, tc: OtelToolCallInput): void {
+  db.run(
+    `INSERT INTO otel_tool_calls (span_id, session_id, tool_name, timestamp, duration_ms, input_summary, output_summary, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    [tc.spanId, tc.sessionId, tc.toolName, tc.timestamp, tc.durationMs, tc.inputSummary, tc.outputSummary, tc.status],
+  );
+}
+
+export interface OtelPromptInput {
+  spanId: string; sessionId: string; timestamp: string; promptText: string; tokenCount: number;
+}
+
+export function insertOtelPrompt(db: Database, p: OtelPromptInput): void {
+  db.run(
+    `INSERT INTO otel_prompts (span_id, session_id, timestamp, prompt_text, token_count)
+     VALUES (?, ?, ?, ?, ?)`,
+    [p.spanId, p.sessionId, p.timestamp, p.promptText, p.tokenCount],
+  );
+}
+
+// ─── OTEL Query Interfaces & Functions ──────────────────────────────────────
+
+export interface SessionTrace {
+  spans: { spanId: string; traceId: string; parentSpanId: string; name: string; kind: number; startTime: string; endTime: string; durationMs: number; status: number; attributes: string; }[];
+  toolCalls: { id: number; spanId: string; toolName: string; timestamp: string; durationMs: number; inputSummary: string; outputSummary: string; status: number; }[];
+  prompts: { id: number; spanId: string; timestamp: string; promptText: string; tokenCount: number; }[];
+}
+
+export function getSessionTrace(db: Database, sessionId: string): SessionTrace {
+  const spans = db.query(
+    `SELECT span_id AS spanId, trace_id AS traceId, parent_span_id AS parentSpanId,
+            name, kind, start_time AS startTime, end_time AS endTime,
+            duration_ms AS durationMs, status, attributes
+     FROM otel_spans WHERE session_id = ? ORDER BY start_time ASC`
+  ).all(sessionId) as SessionTrace["spans"];
+
+  const toolCalls = db.query(
+    `SELECT id, span_id AS spanId, tool_name AS toolName, timestamp,
+            duration_ms AS durationMs, input_summary AS inputSummary,
+            output_summary AS outputSummary, status
+     FROM otel_tool_calls WHERE session_id = ? ORDER BY timestamp ASC`
+  ).all(sessionId) as SessionTrace["toolCalls"];
+
+  const prompts = db.query(
+    `SELECT id, span_id AS spanId, timestamp, prompt_text AS promptText, token_count AS tokenCount
+     FROM otel_prompts WHERE session_id = ? ORDER BY timestamp ASC`
+  ).all(sessionId) as SessionTrace["prompts"];
+
+  return { spans, toolCalls, prompts };
+}
+
+export interface ToolStatsEntry { name: string; count: number; avgDurationMs: number; errorRate: number; totalDurationMs: number; }
+export interface ToolStatsResult { tools: ToolStatsEntry[]; totalCalls: number; totalDurationMs: number; }
+
+export function getToolStats(db: Database, period: "today" | "week" | "month"): ToolStatsResult {
+  const cutoff = getCutoff(period);
+  const tools = db.query(
+    `SELECT tool_name AS name, COUNT(*) AS count, ROUND(AVG(duration_ms), 0) AS avgDurationMs,
+     ROUND(1.0 * SUM(CASE WHEN status = 2 THEN 1 ELSE 0 END) / COUNT(*), 3) AS errorRate,
+     ROUND(SUM(duration_ms), 0) AS totalDurationMs
+     FROM otel_tool_calls WHERE timestamp >= ? GROUP BY tool_name ORDER BY count DESC`
+  ).all(cutoff) as ToolStatsEntry[];
+  const totalCalls = tools.reduce((s, t) => s + t.count, 0);
+  const totalDurationMs = tools.reduce((s, t) => s + t.totalDurationMs, 0);
+  return { tools, totalCalls, totalDurationMs };
+}
+
+export interface ToolTimelineEntry { bucket: string; toolName: string; count: number; }
+
+export function getToolTimeline(db: Database, period: "today" | "week" | "month"): ToolTimelineEntry[] {
+  const cutoff = getCutoff(period);
+  const groupBy = period === "today" ? "strftime('%H:00', timestamp)" : "date(timestamp)";
+  return db.query(
+    `SELECT ${groupBy} AS bucket, tool_name AS toolName, COUNT(*) AS count
+     FROM otel_tool_calls WHERE timestamp >= ? GROUP BY bucket, tool_name ORDER BY bucket ASC`
+  ).all(cutoff) as ToolTimelineEntry[];
+}
+
+export interface PromptStatsResult { totalPrompts: number; avgLength: number; promptsPerSession: number; }
+
+export function getPromptStats(db: Database, period: "today" | "week" | "month"): PromptStatsResult {
+  const cutoff = getCutoff(period);
+  return db.query(
+    `SELECT COUNT(*) AS totalPrompts, COALESCE(ROUND(AVG(LENGTH(prompt_text)), 0), 0) AS avgLength,
+     CASE WHEN COUNT(DISTINCT session_id) > 0 THEN ROUND(1.0 * COUNT(*) / COUNT(DISTINCT session_id), 1) ELSE 0 END AS promptsPerSession
+     FROM otel_prompts WHERE timestamp >= ?`
+  ).get(cutoff) as PromptStatsResult;
+}
+
 export function getThinkingDepth(
   db: Database,
   period: "today" | "week" | "month",
