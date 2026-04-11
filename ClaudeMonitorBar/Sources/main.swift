@@ -71,9 +71,17 @@ class ServerManager: ObservableObject {
         }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/bin/bash")
-        process.arguments = [scriptPath]
-        process.environment = ProcessInfo.processInfo.environment.merging(
-            ["PORT": "\(port)"], uniquingKeysWith: { _, new in new })
+        process.arguments = ["-l", scriptPath]
+        // macOS GUI apps get a minimal PATH — merge in common tool locations
+        let extraPaths = [
+            NSHomeDirectory() + "/.bun/bin",
+            "/opt/homebrew/bin",
+            "/usr/local/bin",
+        ].joined(separator: ":")
+        var env = ProcessInfo.processInfo.environment
+        env["PORT"] = "\(port)"
+        env["PATH"] = extraPaths + ":" + (env["PATH"] ?? "/usr/bin:/bin")
+        process.environment = env
         process.currentDirectoryURL = URL(fileURLWithPath: repoPath)
         try? process.run()
     }
@@ -182,14 +190,14 @@ struct MenuBarView: View {
 
                 Button(action: { serverManager.restartServer() }) {
                     Label("Restart", systemImage: "arrow.clockwise")
-                }
+                }.disabled(!serverManager.isRunning)
             }.buttonStyle(.bordered)
 
             Divider()
 
             Button(action: openDashboard) {
                 Label("Open Dashboard", systemImage: "macwindow")
-            }
+            }.disabled(!serverManager.isRunning)
 
             Button(action: {
                 if let url = URL(string: "http://localhost:4500") {
@@ -197,7 +205,7 @@ struct MenuBarView: View {
                 }
             }) {
                 Label("Open in Browser", systemImage: "safari")
-            }
+            }.disabled(!serverManager.isRunning)
 
             Divider()
 
