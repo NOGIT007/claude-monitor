@@ -8,6 +8,7 @@
     "start": "./scripts/start.sh",
     "stop": "./scripts/stop.sh",
     "backfill": "bun run scripts/backfill.ts",
+    "export": "bun run scripts/export-dashboard.ts",
     "lint": "eslint src/",
     "format": "prettier --write src/",
     "format:check": "prettier --check src/"
@@ -21,7 +22,7 @@
     "@eslint/js": "^10.0.1",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
-    "bun-types": "^1.2.9",
+    "bun-types": "^1.3.12",
     "eslint": "^10.2.0",
     "prettier": "^3.8.2",
     "typescript-eslint": "^8.58.1"
