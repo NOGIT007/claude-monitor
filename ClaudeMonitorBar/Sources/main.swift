@@ -81,6 +81,7 @@ class ServerManager: ObservableObject {
         var env = ProcessInfo.processInfo.environment
         env["PORT"] = "\(port)"
         env["PATH"] = extraPaths + ":" + (env["PATH"] ?? "/usr/bin:/bin")
+        env["CLAUDE_MONITOR_NO_OPEN"] = "1"
         process.environment = env
         process.currentDirectoryURL = URL(fileURLWithPath: repoPath)
         try? process.run()
@@ -148,7 +149,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let hostingView = NSHostingController(
             rootView: DashboardContentView(serverManager: serverManager))
         let window = NSWindow(contentViewController: hostingView)
-        window.title = "Claude Monitor Dashboard"
+        window.title = "Claude Code Monitor Dashboard"
         window.setContentSize(NSSize(width: 1200, height: 800))
         window.center()
         window.makeKeyAndOrderFront(nil)
@@ -169,7 +170,7 @@ struct MenuBarView: View {
                 Circle()
                     .fill(serverManager.isRunning ? Color.green : Color.red)
                     .frame(width: 8, height: 8)
-                Text("Claude Monitor")
+                Text("Claude Code Monitor")
                     .font(.headline)
                 Spacer()
                 Text(serverManager.statusText)

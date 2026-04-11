@@ -40,9 +40,9 @@ cat > "${APP_BUNDLE}/Contents/Info.plist" << 'PLIST'
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Claude Monitor</string>
+    <string>Claude Code Monitor</string>
     <key>CFBundleDisplayName</key>
-    <string>Claude Monitor</string>
+    <string>Claude Code Monitor</string>
     <key>CFBundleIdentifier</key>
     <string>com.kennetkusk.ClaudeMonitorBar</string>
     <key>CFBundleVersion</key>
