@@ -25,6 +25,12 @@ if [[ -f "$PID_FILE" ]]; then
   rm -f "$PID_FILE"
 fi
 
+# Auto-enable OTEL tracing for Claude Code
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:${PORT}"
+export OTEL_LOG_USER_PROMPTS=true
+export OTEL_LOG_TOOL_DETAILS=true
+export OTEL_LOG_TOOL_CONTENT=true
+
 # Start the server
 if [[ -x "$SCRIPT_DIR/claude-monitor" ]]; then
   PORT="$PORT" "$SCRIPT_DIR/claude-monitor" &
