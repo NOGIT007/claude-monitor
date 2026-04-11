@@ -1,17 +1,21 @@
 /**
- * Lightweight OTLP/HTTP JSON collector that ingests Claude Code telemetry
- * into NDJSON files. Receives metrics, logs/events, and traces.
- *
- * Listens on port 4318 (OTLP HTTP default).
+ * OTLP/HTTP JSON collector that ingests Claude Code telemetry into SQLite.
+ * Exposes handleOtelRequest(req, db) for embedding in the main server.
+ * Metrics and logs still write to NDJSON files for diagnostics.
  */
 
 import { mkdirSync, appendFileSync } from "fs";
 import { join, resolve } from "path";
+import { Database } from "bun:sqlite";
+import {
+  insertOtelSpan,
+  insertOtelToolCall,
+  insertOtelPrompt,
+} from "./db";
 
 const DATA_DIR = resolve(import.meta.dir, "../data");
 const EVENTS_PATH = join(DATA_DIR, "otel_events.ndjson");
 const METRICS_PATH = join(DATA_DIR, "otel_metrics.ndjson");
-const TRACES_PATH = join(DATA_DIR, "otel_traces.ndjson");
 
 mkdirSync(DATA_DIR, { recursive: true });
 
@@ -80,7 +84,7 @@ function processLogs(body: any): number {
         const attrs = flattenAttributes(log.attributes ?? []);
         const eventName = attrs["event.name"] ?? "unknown";
 
-        const record = {
+        const record: Record<string, any> = {
           timestamp: safeTimestamp(log.timeUnixNano),
           event: eventName,
           severity: log.severityText ?? "",
@@ -106,30 +110,70 @@ function processLogs(body: any): number {
   return count;
 }
 
-function processTraces(body: any): number {
+function processTraces(db: Database, body: any): number {
   let count = 0;
   const resourceSpans = body.resourceSpans ?? [];
   for (const rs of resourceSpans) {
     const resourceAttrs = flattenAttributes(rs.resource?.attributes ?? []);
+    const sessionId: string = resourceAttrs["session.id"] ?? "";
+
     for (const ss of rs.scopeSpans ?? []) {
       for (const span of ss.spans ?? []) {
-        const attrs = flattenAttributes(span.attributes ?? []);
-        const record = {
-          trace_id: span.traceId ?? "",
-          span_id: span.spanId ?? "",
-          parent_span_id: span.parentSpanId ?? "",
+        const spanAttrs = flattenAttributes(span.attributes ?? []);
+        const startTime = safeTimestamp(span.startTimeUnixNano);
+        const endTime = safeTimestamp(span.endTimeUnixNano);
+        const durationMs =
+          span.startTimeUnixNano && span.endTimeUnixNano
+            ? (Number(span.endTimeUnixNano) - Number(span.startTimeUnixNano)) / 1e6
+            : 0;
+
+        // Insert the span itself
+        insertOtelSpan(db, {
+          spanId: span.spanId ?? "",
+          traceId: span.traceId ?? "",
+          parentSpanId: span.parentSpanId ?? "",
+          sessionId,
           name: span.name ?? "",
           kind: span.kind ?? 0,
-          start_time: span.startTimeUnixNano ? safeTimestamp(span.startTimeUnixNano) : "",
-          end_time: span.endTimeUnixNano ? safeTimestamp(span.endTimeUnixNano) : "",
-          duration_ms: span.startTimeUnixNano && span.endTimeUnixNano
-            ? (Number(span.endTimeUnixNano) - Number(span.startTimeUnixNano)) / 1e6
-            : 0,
+          startTime,
+          endTime,
+          durationMs,
           status: span.status?.code ?? 0,
-          ...resourceAttrs,
-          ...attrs,
-        };
-        appendFileSync(TRACES_PATH, JSON.stringify(record) + "\n");
+          attributes: JSON.stringify(spanAttrs),
+        });
+
+        // Extract tool call if span has tool.name or name includes "tool"
+        if (spanAttrs["tool.name"] !== undefined || (span.name ?? "").includes("tool")) {
+          const toolName: string = spanAttrs["tool.name"] ?? span.name ?? "";
+          const inputSummary = String(spanAttrs["tool.input"] ?? "").slice(0, 1000);
+          const outputSummary = String(spanAttrs["tool.output"] ?? "").slice(0, 1000);
+
+          insertOtelToolCall(db, {
+            spanId: span.spanId ?? "",
+            sessionId,
+            toolName,
+            timestamp: startTime,
+            durationMs,
+            inputSummary,
+            outputSummary,
+            status: span.status?.code ?? 0,
+          });
+        }
+
+        // Extract prompt if span has user.prompt attribute
+        if (spanAttrs["user.prompt"] !== undefined) {
+          const promptText = String(spanAttrs["user.prompt"]).slice(0, 1000);
+          const tokenCount = Number(spanAttrs["user.prompt.token_count"] ?? 0);
+
+          insertOtelPrompt(db, {
+            spanId: span.spanId ?? "",
+            sessionId,
+            timestamp: startTime,
+            promptText,
+            tokenCount,
+          });
+        }
+
         count++;
       }
     }
@@ -137,44 +181,37 @@ function processTraces(body: any): number {
   return count;
 }
 
-const port = parseInt(process.env.OTEL_PORT || "4318", 10);
+export async function handleOtelRequest(
+  req: Request,
+  db: Database,
+): Promise<Response | null> {
+  const url = new URL(req.url);
+  const { pathname } = url;
 
-const server = Bun.serve({
-  port,
-  async fetch(req) {
-    const url = new URL(req.url);
+  if (req.method !== "POST") return null;
 
-    // OTLP HTTP endpoints
-    if (req.method === "POST") {
-      try {
-        const body = await req.json();
+  if (
+    pathname !== "/v1/traces" &&
+    pathname !== "/v1/metrics" &&
+    pathname !== "/v1/logs"
+  ) {
+    return null;
+  }
 
-        if (url.pathname === "/v1/metrics") {
-          processMetrics(body);
-        } else if (url.pathname === "/v1/logs") {
-          processLogs(body);
-        } else if (url.pathname === "/v1/traces") {
-          processTraces(body);
-        } else {
-          return new Response("Not found", { status: 404 });
-        }
+  try {
+    const body = await req.json();
 
-        return Response.json({ partialSuccess: {} });
-      } catch (err) {
-        console.error("[otel] Parse error:", err);
-        return new Response("Bad request", { status: 400 });
-      }
+    if (pathname === "/v1/traces") {
+      processTraces(db, body);
+    } else if (pathname === "/v1/metrics") {
+      processMetrics(body);
+    } else if (pathname === "/v1/logs") {
+      processLogs(body);
     }
 
-    // Health check
-    if (url.pathname === "/health") {
-      return Response.json({ status: "ok" });
-    }
-
-    return new Response("OTLP Collector", { status: 200 });
-  },
-});
-
-console.log(`[otel] OTLP collector listening on http://localhost:${server.port}`);
-
-export { server };
+    return Response.json({ partialSuccess: {} });
+  } catch (err) {
+    console.error("[otel] Parse error:", err);
+    return new Response("Bad request", { status: 400 });
+  }
+}

@@ -3,7 +3,7 @@ import { startWatcher } from "./watcher";
 import { handleApiRequest } from "./api";
 import { handleWsOpen, handleWsClose, handleWsMessage } from "./ws";
 import { join, resolve } from "path";
-import "./otel-collector";
+import { handleOtelRequest } from "./otel-collector";
 
 const port = parseInt(process.env.PORT || "3000", 10);
 if (isNaN(port) || port < 1 || port > 65535) {
@@ -64,9 +64,12 @@ const indexHtml = `<!DOCTYPE html>
 
 const server = Bun.serve({
   port,
-  fetch(req, server) {
+  async fetch(req, server) {
     const apiResponse = handleApiRequest(req, db);
     if (apiResponse) return apiResponse;
+
+    const otelResponse = await handleOtelRequest(req, db);
+    if (otelResponse) return otelResponse;
 
     const url = new URL(req.url);
 
