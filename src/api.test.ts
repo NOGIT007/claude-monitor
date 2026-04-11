@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { Database } from "bun:sqlite";
-import { initDb, upsertSession, insertTokenUsage } from "./db";
+import { initDb, upsertSession, insertTokenUsage, insertOtelSpan, insertOtelToolCall, insertOtelPrompt } from "./db";
 import { handleApiRequest } from "./api";
 import { unlinkSync } from "fs";
 
@@ -259,6 +259,64 @@ describe("api", () => {
       expect(handleApiRequest(makeRequest("/"), db)).toBeNull();
       expect(handleApiRequest(makeRequest("/index.html"), db)).toBeNull();
       expect(handleApiRequest(makeRequest("/api/unknown"), db)).toBeNull();
+    });
+  });
+
+  describe("OTEL endpoints", () => {
+    beforeEach(() => {
+      const now = new Date().toISOString();
+      insertOtelSpan(db, {
+        spanId: "span-1", traceId: "trace-1", parentSpanId: "", sessionId: "sess-1",
+        name: "interaction", kind: 1, startTime: now, endTime: now,
+        durationMs: 5000, status: 0, attributes: "{}",
+      });
+      insertOtelToolCall(db, {
+        spanId: "span-1", sessionId: "sess-1", toolName: "Bash",
+        timestamp: now, durationMs: 1200, inputSummary: "ls", outputSummary: "files...", status: 0,
+      });
+      insertOtelToolCall(db, {
+        spanId: "span-1", sessionId: "sess-1", toolName: "Read",
+        timestamp: now, durationMs: 50, inputSummary: "db.ts", outputSummary: "content...", status: 0,
+      });
+      insertOtelPrompt(db, {
+        spanId: "span-1", sessionId: "sess-1", timestamp: now,
+        promptText: "List files", tokenCount: 3,
+      });
+    });
+
+    it("GET /api/traces/session/sess-1 returns trace data", async () => {
+      const res = handleApiRequest(makeRequest("/api/traces/session/sess-1"), db, testApiOptions);
+      expect(res).not.toBeNull();
+      expect(res!.status).toBe(200);
+      const data = await res!.json();
+      expect(data.spans.length).toBe(1);
+      expect(data.toolCalls.length).toBe(2);
+      expect(data.prompts.length).toBe(1);
+    });
+
+    it("GET /api/stats/tools returns tool stats", async () => {
+      const res = handleApiRequest(makeRequest("/api/stats/tools?period=today"), db, testApiOptions);
+      expect(res).not.toBeNull();
+      expect(res!.status).toBe(200);
+      const data = await res!.json();
+      expect(data.tools.length).toBe(2);
+      expect(data.totalCalls).toBe(2);
+    });
+
+    it("GET /api/stats/tools/timeline returns timeline", async () => {
+      const res = handleApiRequest(makeRequest("/api/stats/tools/timeline?period=today"), db, testApiOptions);
+      expect(res).not.toBeNull();
+      expect(res!.status).toBe(200);
+      const data = await res!.json();
+      expect(Array.isArray(data)).toBe(true);
+    });
+
+    it("GET /api/stats/prompts returns prompt stats", async () => {
+      const res = handleApiRequest(makeRequest("/api/stats/prompts?period=today"), db, testApiOptions);
+      expect(res).not.toBeNull();
+      expect(res!.status).toBe(200);
+      const data = await res!.json();
+      expect(data.totalPrompts).toBe(1);
     });
   });
 });

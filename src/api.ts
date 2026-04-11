@@ -19,6 +19,10 @@ import {
   getStopoutEvents,
   getSessionBurnRates,
   getRateLimitStats,
+  getSessionTrace,
+  getToolStats,
+  getToolTimeline,
+  getPromptStats,
 } from "./db";
 
 type StatsPeriod = "today" | "week" | "month";
@@ -150,6 +154,31 @@ export function handleApiRequest(req: Request, db: Database, options?: ApiOption
       stopouts: getStopoutEvents(db, threshold),
       burnRates: getSessionBurnRates(db),
     });
+  }
+
+  // Session trace drill-down
+  const traceMatch = pathname.match(/^\/api\/traces\/session\/(.+)$/);
+  if (traceMatch) {
+    const sessionId = decodeURIComponent(traceMatch[1]);
+    return json(getSessionTrace(db, sessionId));
+  }
+
+  if (pathname === "/api/stats/tools") {
+    const period = parsePeriod(url);
+    if (!period) return json({ error: "Invalid period" }, 400);
+    return json(getToolStats(db, period));
+  }
+
+  if (pathname === "/api/stats/tools/timeline") {
+    const period = parsePeriod(url);
+    if (!period) return json({ error: "Invalid period" }, 400);
+    return json(getToolTimeline(db, period));
+  }
+
+  if (pathname === "/api/stats/prompts") {
+    const period = parsePeriod(url);
+    if (!period) return json({ error: "Invalid period" }, 400);
+    return json(getPromptStats(db, period));
   }
 
   if (pathname.startsWith("/api/stats/")) {
