@@ -3,7 +3,8 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-APP_NAME="ClaudeMonitorBar"
+APP_NAME="Claude Code Monitor"
+EXECUTABLE_NAME="ClaudeMonitorBar"
 BUILD_DIR="build"
 APP_BUNDLE="${BUILD_DIR}/${APP_NAME}.app"
 
@@ -17,7 +18,7 @@ mkdir -p "${APP_BUNDLE}/Contents/Resources"
 # Compile
 echo "Compiling Swift..."
 swiftc Sources/main.swift \
-    -o "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}" \
+    -o "${APP_BUNDLE}/Contents/MacOS/${EXECUTABLE_NAME}" \
     -framework SwiftUI \
     -framework WebKit \
     -framework AppKit \
