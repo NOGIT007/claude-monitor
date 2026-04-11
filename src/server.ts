@@ -107,6 +107,23 @@ const server = Bun.serve({
   },
 });
 
+// Also accept OTEL on the standard OTLP port (4318) so Claude Code's default
+// OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318 works without configuration.
+const OTEL_PORT = 4318;
+try {
+  Bun.serve({
+    port: OTEL_PORT,
+    async fetch(req) {
+      const otelResponse = await handleOtelRequest(req, db);
+      if (otelResponse) return otelResponse;
+      return new Response("Not found", { status: 404 });
+    },
+  });
+  console.log(`OTEL collector listening at http://localhost:${OTEL_PORT}`);
+} catch {
+  console.warn(`[otel] Port ${OTEL_PORT} in use — OTEL only available on port ${port}`);
+}
+
 console.log(`Claude Monitor running at http://localhost:${server.port}`);
 
 function shutdown() {
