@@ -97,7 +97,7 @@ export interface ActivityDay {
   cost: number;
 }
 
-export type AnalyticsTab = "tokens" | "workflow" | "productivity" | "thinking" | "ratelimits";
+export type AnalyticsTab = "tokens" | "workflow" | "productivity" | "thinking" | "ratelimits" | "tools";
 
 export interface RateLimitTimelineEntry {
   captured_at: string;
@@ -159,4 +159,70 @@ export interface CumulativeCostEntry {
   date: string;
   dailyCost: number;
   cumulativeCost: number;
+}
+
+// OTEL trace types
+
+export interface OtelSpan {
+  spanId: string;
+  traceId: string;
+  parentSpanId: string;
+  name: string;
+  kind: number;
+  startTime: string;
+  endTime: string;
+  durationMs: number;
+  status: number;
+  attributes: string;
+}
+
+export interface OtelToolCall {
+  id: number;
+  spanId: string;
+  toolName: string;
+  timestamp: string;
+  durationMs: number;
+  inputSummary: string;
+  outputSummary: string;
+  status: number;
+}
+
+export interface OtelPrompt {
+  id: number;
+  spanId: string;
+  timestamp: string;
+  promptText: string;
+  tokenCount: number;
+}
+
+export interface SessionTrace {
+  spans: OtelSpan[];
+  toolCalls: OtelToolCall[];
+  prompts: OtelPrompt[];
+}
+
+export interface ToolStatsEntry {
+  name: string;
+  count: number;
+  avgDurationMs: number;
+  errorRate: number;
+  totalDurationMs: number;
+}
+
+export interface ToolStatsResult {
+  tools: ToolStatsEntry[];
+  totalCalls: number;
+  totalDurationMs: number;
+}
+
+export interface ToolTimelineEntry {
+  bucket: string;
+  toolName: string;
+  count: number;
+}
+
+export interface PromptStatsResult {
+  totalPrompts: number;
+  avgLength: number;
+  promptsPerSession: number;
 }
