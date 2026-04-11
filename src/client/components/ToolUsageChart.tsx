@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -16,13 +16,6 @@ interface Props {
   period: "today" | "week" | "month";
 }
 
-type Period = "today" | "week" | "month";
-const PERIODS: { key: Period; label: string }[] = [
-  { key: "today", label: "Today" },
-  { key: "week", label: "Week" },
-  { key: "month", label: "Month" },
-];
-
 const TOOL_COLORS = [
   "var(--ctp-blue)",
   "var(--ctp-green)",
@@ -34,8 +27,15 @@ const TOOL_COLORS = [
   "var(--ctp-pink)",
 ];
 
-export function ToolUsageChart({ period: initialPeriod }: Props) {
-  const [period, setPeriod] = useState<Period>(initialPeriod);
+/** Strip common OTEL prefixes so labels are short and readable */
+function shortName(name: string): string {
+  return name
+    .replace(/^claude_code\.tool\./, "")
+    .replace(/^claude_code\./, "")
+    .replace(/_/g, " ");
+}
+
+export function ToolUsageChart({ period }: Props) {
   const [toolStats, setToolStats] = useState<ToolStatsResult | null>(null);
   const [timeline, setTimeline] = useState<ToolTimelineEntry[]>([]);
   const [promptStats, setPromptStats] = useState<PromptStatsResult | null>(null);
@@ -57,33 +57,18 @@ export function ToolUsageChart({ period: initialPeriod }: Props) {
       .catch(() => setPromptStats(null));
   }, [period]);
 
-  const periodSelector = (
-    <div style={{ display: "flex", gap: "0.4rem", marginBottom: "1rem" }}>
-      {PERIODS.map(({ key, label }) => (
-        <button
-          key={key}
-          onClick={() => setPeriod(key)}
-          className={`tab-btn ${period === key ? "tab-btn--active" : "tab-btn--inactive"}`}
-          style={{ fontSize: "0.7rem", padding: "0.3rem 0.75rem" }}
-        >
-          {label}
-        </button>
-      ))}
-    </div>
-  );
-
   if (!toolStats || toolStats.tools.length === 0) {
     return (
-      <div>
-        {periodSelector}
-        <div className="card">
-          <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>
-            No OTEL tool data yet. Enable tracing with OTEL_LOG_TOOL_DETAILS=true to see tool analytics.
-          </p>
-        </div>
+      <div className="card">
+        <p style={{ color: "var(--ctp-subtext0)", margin: 0 }}>
+          No OTEL tool data yet. Enable tracing with OTEL_LOG_TOOL_DETAILS=true to see tool analytics.
+        </p>
       </div>
     );
   }
+
+  // Augment tools with short display name for chart labels
+  const toolsDisplay = toolStats.tools.map((t) => ({ ...t, label: shortName(t.name) }));
 
   // Build timeline data: pivot toolName into columns per bucket
   const toolNames = [...new Set(timeline.map((t) => t.toolName))];
@@ -96,9 +81,12 @@ export function ToolUsageChart({ period: initialPeriod }: Props) {
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([bucket, tools]) => ({ bucket, ...tools }));
 
+  // Y-axis width: fit the longest short label
+  const maxLabelLen = Math.max(...toolsDisplay.map((t) => t.label.length));
+  const yAxisWidth = Math.min(Math.max(maxLabelLen * 7, 80), 180);
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
-      {periodSelector}
       {/* Summary cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "1rem" }}>
         <div className="card" style={{ textAlign: "center" }}>
@@ -140,27 +128,29 @@ export function ToolUsageChart({ period: initialPeriod }: Props) {
         <h3 style={{ margin: "0 0 0.8rem", fontSize: "0.95rem", fontWeight: 700, color: "var(--ctp-text)" }}>
           Tool Calls by Type
         </h3>
-        <ResponsiveContainer width="100%" height={Math.max(200, toolStats.tools.length * 40)}>
-          <BarChart data={toolStats.tools} layout="vertical" margin={{ left: 60, right: 20, top: 5, bottom: 5 }}>
+        <ResponsiveContainer width="100%" height={Math.max(200, toolsDisplay.length * 44)}>
+          <BarChart data={toolsDisplay} layout="vertical" margin={{ left: 8, right: 20, top: 5, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(69,71,90,0.2)" />
             <XAxis type="number" tick={{ fill: "var(--ctp-subtext0)", fontSize: 11 }} />
-            <YAxis type="category" dataKey="name" tick={{ fill: "var(--ctp-text)", fontSize: 12, fontFamily: "var(--font-mono)" }} width={60} />
+            <YAxis
+              type="category"
+              dataKey="label"
+              width={yAxisWidth}
+              tick={{ fill: "var(--ctp-text)", fontSize: 12, fontFamily: "var(--font-mono)" }}
+            />
             <Tooltip
               contentStyle={{ background: "var(--ctp-surface0)", border: "1px solid var(--ctp-surface1)", borderRadius: 8, fontSize: 12 }}
-              formatter={(value: number, name: string) => {
-                if (name === "count") return [value, "Calls"];
-                return [value, name];
-              }}
+              formatter={(value: number) => [value, "Calls"]}
               labelFormatter={(label) => label}
             />
             <Bar dataKey="count" fill="var(--ctp-blue)" radius={[0, 4, 4, 0]} />
           </BarChart>
         </ResponsiveContainer>
-        {/* Error rates inline */}
+        {/* Avg duration per tool */}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", marginTop: "0.75rem" }}>
-          {toolStats.tools.map((t) => (
+          {toolsDisplay.map((t) => (
             <span key={t.name} style={{ fontFamily: "var(--font-mono)", fontSize: "0.7rem", color: "var(--ctp-subtext0)" }}>
-              {t.name}: avg {Math.round(t.avgDurationMs)}ms
+              <span style={{ color: "var(--ctp-text)" }}>{t.label}</span>: avg {Math.round(t.avgDurationMs)}ms
               {t.errorRate > 0 && (
                 <span style={{ color: "var(--ctp-red)", marginLeft: "0.3rem" }}>
                   ({(t.errorRate * 100).toFixed(1)}% err)
@@ -184,6 +174,7 @@ export function ToolUsageChart({ period: initialPeriod }: Props) {
               <YAxis tick={{ fill: "var(--ctp-subtext0)", fontSize: 11 }} />
               <Tooltip
                 contentStyle={{ background: "var(--ctp-surface0)", border: "1px solid var(--ctp-surface1)", borderRadius: 8, fontSize: 12 }}
+                formatter={(value: number, name: string) => [value, shortName(name)]}
               />
               {toolNames.map((name, i) => (
                 <Area
