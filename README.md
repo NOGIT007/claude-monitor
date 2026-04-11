@@ -6,14 +6,17 @@ Real-time dashboard for tracking Claude Code usage, costs, and session activity.
 
 - **Live Sessions** — Real-time view of all running Claude Code instances with CLI/Desktop icons
 - **Rate Limits** — Session and weekly usage percentage tracking with color-coded bars
-- **Session History** — Per-session metadata table with model, effort level, tokens, cost, pagination and sorting
+- **Session History** — Per-session metadata table with model, effort level, tokens, cost, pagination and sorting; click any row to see a full tool call + prompt timeline
 - **Usage Statistics** — Today/week/month breakdowns with period comparison badges
 - **Cost per Project** — Top 5 projects + aggregated "Other" bar chart
 - **Model Breakdown** — Token distribution across Opus, Sonnet, and Haiku
 - **Cost Trend** — Daily and cumulative cost charts
 - **Peak Hours** — Hourly usage heatmap
 - **Token History** — Daily token breakdown (input, output, cache read, cache write)
-- **OTEL Collector** — Built-in OTLP/HTTP endpoint for ingesting OpenTelemetry metrics, events, and traces
+- **Tool Usage** — Per-tool call counts, durations, error rates, and over-time charts powered by OTEL tracing
+- **Thinking Depth** — Tracks extended thinking frequency and depth across sessions
+- **macOS Menu Bar App** — Native Swift app (`Claude Code Monitor.app`) with live stats, server controls, and quick dashboard access
+- **OTEL Collector** — Built-in OTLP/HTTP endpoint on ports 4500 and 4318 for ingesting Claude Code telemetry
 
 ## Quick Start
 
@@ -55,25 +58,37 @@ The monitor watches `~/.claude/projects/` for JSONL session logs written by Clau
 | `bun run build` | Compile to standalone binary |
 | `bun run backfill` | Import historical data from JSONL logs |
 
-## Enable OpenTelemetry
+## macOS Menu Bar App
 
-Add to `~/.claude/settings.json` under `"env"`:
+Install the native menu bar app for quick access:
 
-```json
-{
-  "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
-  "CLAUDE_CODE_ENHANCED_TELEMETRY_BETA": "1",
-  "OTEL_METRICS_EXPORTER": "otlp",
-  "OTEL_LOGS_EXPORTER": "otlp",
-  "OTEL_TRACES_EXPORTER": "otlp",
-  "OTEL_EXPORTER_OTLP_PROTOCOL": "http/json",
-  "OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318",
-  "OTEL_METRIC_EXPORT_INTERVAL": "30000",
-  "OTEL_LOG_TOOL_DETAILS": "1"
-}
+```bash
+cd ClaudeMonitorBar
+./build.sh
+cp -r "build/Claude Code Monitor.app" /Applications/
+open "/Applications/Claude Code Monitor.app"
 ```
 
-Restart Claude Code sessions after adding these. The built-in collector on port 4318 will capture all telemetry.
+The app shows live session count and token burn rate in the menu bar, with controls to start/stop/restart the server and open the dashboard.
+
+## Enable Tool Usage Analytics (OTEL)
+
+The monitor listens on port 4318 (standard OTLP default) — no endpoint config needed. Just enable tracing in your shell:
+
+```bash
+# Add to ~/.zshrc (the monitor writes this file on every start)
+source ~/.claude-monitor.env
+```
+
+Or set manually:
+
+```bash
+export OTEL_LOG_TOOL_DETAILS=true       # required: per-tool call stats
+export OTEL_LOG_TOOL_CONTENT=true       # optional: capture input/output
+export OTEL_LOG_USER_PROMPTS=true       # optional: capture prompt text
+```
+
+Restart your terminal and run `claude` — the Tool Usage tab will populate with real tool call data.
 
 ## Tech Stack
 

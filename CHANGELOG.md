@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.3.0] - 2026-04-11
+
+### Added
+- **macOS menu bar app** (`ClaudeMonitorBar`) — native Swift/SwiftUI app that lives in the menu bar, shows live session count and token burn rate, with Start/Stop/Restart server controls and dashboard quick-open. Installs as `Claude Code Monitor.app`.
+- **Tool Usage analytics tab** — tracks every tool Claude Code calls (Bash, Read, Write, Edit, Grep, Glob, Agent, etc.) with call counts, average duration, error rates, and a stacked area timeline.
+- **Session drill-down** — click any session row in Workflow Intelligence → Session History to expand a merged timeline of prompts and tool calls with expandable input/output detail.
+- **OTEL ingestion** — embedded OTLP/HTTP collector now stores tool calls and prompts in SQLite (`otel_tool_calls`, `otel_prompts` tables). Listens on both port 4500 (main server) and port 4318 (standard OTLP default) so Claude Code works without any configuration change.
+- **"What is this?" explainer** on the Tool Usage tab — modal with setup instructions, chart descriptions, and tool name reference.
+- `~/.claude-monitor.env` written on every server start — source it from `~/.zshrc` to enable persistent OTEL tracing across all terminals.
+
+### Fixed
+- Server now survives `start.sh` exit — uses `nohup` + `disown` so the process stays alive after the shell that launched it closes.
+- macOS menu bar app `PATH` — explicitly includes `~/.bun/bin` and `/opt/homebrew/bin` so `bun` is found in GUI app environment.
+- Restart, Open Dashboard, and Open in Browser buttons are disabled when the server is not running.
+- App appears as "Claude Code Monitor" in Spotlight — bundle renamed from `ClaudeMonitorBar.app`.
+- Tab switching layout bounce — all tab panels use `display` toggle with `minHeight: 400` instead of mount/unmount.
+- OTEL tool calls now only captured from `claude_code.tool` root spans with explicit `tool_name` attribute — sub-spans (`tool.execution`, `tool.blocked_on_user`) are no longer counted as separate tool calls.
+- OTEL env vars written to `~/.claude-monitor.env` so tracing persists across terminal sessions.
+
 ## [1.2.1] - 2026-04-10
 
 ### Fixed
