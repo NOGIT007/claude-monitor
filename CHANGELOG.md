@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-04-12
+
+### Added
+- **Offline dashboard export** (`bun run export`) — exports a fully self-contained `dashboard.html` snapshot by fetching all API routes from the running server and baking them into `window.__SNAPSHOT__`. Works via `file://` with no server needed after export.
+- **Snapshot mode indicator** — when viewing an exported snapshot, the header shows `snapshot · <date>` instead of the live connection dot.
+
+### Fixed
+- **DB maintenance** — replaced incorrect `Bun.cron()` usage (which runs external scripts, not inline callbacks) with `setInterval`; maintenance timer is now properly cleared on shutdown.
+- **Sessions table pruning** — the hourly maintenance job now deletes old sessions in addition to token_usage/OTEL data, preventing ghost session rows after 90 days. Sessions are deleted after token_usage to respect the FK constraint.
+- **Export build error handling** — `export-dashboard.ts` now checks `buildResult.success` before using outputs; previously a failed build could silently emit a broken HTML file.
+- **Export no longer loads Google Fonts from CDN** — removed external font links that broke the offline guarantee; system font fallbacks in theme.css are used instead.
+
 ## [1.3.0] - 2026-04-11
 
 ### Added
