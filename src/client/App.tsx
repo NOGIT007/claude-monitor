@@ -145,28 +145,41 @@ export function App() {
           )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-          <span
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "0.3rem",
-              fontFamily: "var(--font-mono)",
-              fontSize: "0.6rem",
-              color: wsStatus === "connected" ? "var(--ctp-green)"
-                : wsStatus === "connecting" ? "var(--ctp-yellow)"
-                : "var(--ctp-red)",
-            }}
-            title={`WebSocket: ${wsStatus}`}
-          >
-            <span style={{
-              width: 6,
-              height: 6,
-              borderRadius: "50%",
-              background: "currentColor",
-              display: "inline-block",
-            }} />
-            {wsStatus === "disconnected" ? "reconnecting…" : "live"}
-          </span>
+          {window.__SNAPSHOT__ ? (
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.6rem",
+                color: "var(--ctp-yellow)",
+              }}
+              title={`Snapshot captured ${new Date(window.__SNAPSHOT__.capturedAt).toLocaleString()}`}
+            >
+              snapshot · {new Date(window.__SNAPSHOT__.capturedAt).toLocaleDateString()}
+            </span>
+          ) : (
+            <span
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.3rem",
+                fontFamily: "var(--font-mono)",
+                fontSize: "0.6rem",
+                color: wsStatus === "connected" ? "var(--ctp-green)"
+                  : wsStatus === "connecting" ? "var(--ctp-yellow)"
+                  : "var(--ctp-red)",
+              }}
+              title={`WebSocket: ${wsStatus}`}
+            >
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: "currentColor",
+                display: "inline-block",
+              }} />
+              {wsStatus === "disconnected" ? "reconnecting…" : "live"}
+            </span>
+          )}
           <span
             style={{
               fontFamily: "var(--font-mono)",

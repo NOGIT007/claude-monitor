@@ -11,6 +11,7 @@ bun run dev              # Hot-reload dev server (port 3000)
 bun run build            # Compile to standalone binary ./claude-monitor
 bun run start            # Start via scripts/start.sh (auto-restarts if already running)
 bun run stop             # Stop background server
+bun run export           # Export static snapshot HTML (server must be running)
 bun test                 # Run all tests
 bun test src/db.test.ts  # Run single test file
 ```
