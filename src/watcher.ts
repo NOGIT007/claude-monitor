@@ -1,4 +1,4 @@
-import { watch, statSync, openSync, readSync, closeSync, readdirSync } from "fs";
+import { watch, statSync, openSync, readSync, closeSync } from "fs";
 import { join, resolve } from "path";
 import { homedir } from "os";
 import type { Database } from "bun:sqlite";
@@ -17,15 +17,9 @@ function scanExistingFiles(
   offsets: Map<string, number>,
 ): void {
   try {
-    const entries = readdirSync(dir, { withFileTypes: true, recursive: true });
-    for (const entry of entries) {
-      if (!entry.isFile()) continue;
-      if (!entry.name.endsWith(".jsonl")) continue;
-      const parentPath =
-        "parentPath" in entry
-          ? (entry as any).parentPath
-          : (entry as any).path;
-      const fullPath = join(parentPath, entry.name);
+    const glob = new Bun.Glob("**/*.jsonl");
+    for (const relativePath of glob.scanSync(dir)) {
+      const fullPath = join(dir, relativePath);
       try {
         const stat = statSync(fullPath);
         offsets.set(fullPath, stat.size);

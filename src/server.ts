@@ -126,6 +126,20 @@ try {
 
 console.log(`Claude Monitor running at http://localhost:${server.port}`);
 
+// Scheduled DB maintenance via Bun.cron
+const dbMaintenance = Bun.cron("db-maintenance", "0 * * * *", () => {
+  try {
+    db.run("DELETE FROM token_usage WHERE timestamp < datetime('now', '-90 days')");
+    db.run("DELETE FROM otel_spans WHERE start_time < datetime('now', '-90 days')");
+    db.run("DELETE FROM otel_tool_calls WHERE timestamp < datetime('now', '-90 days')");
+    db.run("DELETE FROM otel_prompts WHERE timestamp < datetime('now', '-90 days')");
+    db.run("PRAGMA wal_checkpoint(TRUNCATE)");
+    console.log("[cron] DB maintenance completed");
+  } catch (err) {
+    console.error("[cron] DB maintenance failed:", err);
+  }
+});
+
 function shutdown() {
   watcher.close();
   server.stop();

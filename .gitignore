@@ -1,6 +1,7 @@
 node_modules/
 data/
 claude-monitor
+dashboard.html
 *.db
 *.ndjson
 .DS_Store
