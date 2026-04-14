@@ -40,7 +40,23 @@ export function formatHour(hour: number): string {
   return `${String(h).padStart(2, "0")}:00`;
 }
 
+const GENERIC_DIRS = new Set([
+  "scripts", "src", "app", "lib", "packages", "raw", "dist", "build", "cmd",
+]);
+
+/** Strip trailing generic subdirectories to get the real project name */
+export function normalizeProjectPath(path: string): string {
+  let p = path;
+  // Strip trailing generic dirs (could be nested: .../project/src/app)
+  const parts = p.split("/");
+  while (parts.length > 1 && GENERIC_DIRS.has(parts[parts.length - 1])) {
+    parts.pop();
+  }
+  return parts.join("/");
+}
+
 export function projectName(path: string | undefined): string {
   if (!path) return "unknown";
-  return path.split("/").pop() || path;
+  const normalized = normalizeProjectPath(path);
+  return normalized.split("/").pop() || path;
 }
