@@ -300,6 +300,302 @@ section:nth-child(6) { animation-delay: 0.25s; }
 section:nth-child(7) { animation-delay: 0.3s; }
 section:nth-child(8) { animation-delay: 0.35s; }
 
+/* ── Overview Dashboard ──────────────────────────── */
+
+.overview-dashboard {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.ov-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(69, 71, 90, 0.3);
+}
+
+.ov-header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.ov-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--ctp-lavender);
+  letter-spacing: -0.02em;
+}
+
+.ov-active-badge {
+  background: rgba(166, 227, 161, 0.15);
+  color: var(--ctp-green);
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+  border: 1px solid rgba(166, 227, 161, 0.2);
+}
+
+.ov-header-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.ov-period-tabs {
+  display: flex;
+  gap: 0.25rem;
+  background: rgba(49, 50, 68, 0.4);
+  border-radius: 8px;
+  padding: 0.2rem;
+}
+
+.ov-period-btn {
+  padding: 0.3rem 0.8rem;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 0.7rem;
+  background: transparent;
+  color: var(--ctp-subtext0);
+  transition: all 0.15s ease;
+}
+
+.ov-period-btn:hover {
+  color: var(--ctp-text);
+  background: rgba(69, 71, 90, 0.3);
+}
+
+.ov-period-btn--active {
+  background: var(--ctp-blue);
+  color: var(--ctp-crust);
+  box-shadow: 0 0 10px rgba(137, 180, 250, 0.2);
+}
+
+.ov-ws-dot {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+}
+
+.ov-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+}
+
+/* Stats bar */
+.ov-stats-bar {
+  background: linear-gradient(135deg, rgba(24, 24, 37, 0.9) 0%, rgba(30, 30, 46, 0.7) 100%);
+  border: 1px solid rgba(69, 71, 90, 0.3);
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.ov-stat-primary {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.ov-stat-value {
+  font-family: var(--font-mono);
+  font-weight: 800;
+  font-size: 1.6rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-stat-delta {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.ov-stat-delta--good {
+  background: rgba(166, 227, 161, 0.12);
+  color: var(--ctp-green);
+}
+
+.ov-stat-delta--bad {
+  background: rgba(243, 139, 168, 0.12);
+  color: var(--ctp-red);
+}
+
+.ov-stat-group {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.ov-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+}
+
+.ov-stat-label {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--ctp-overlay0);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ov-stat-num {
+  font-family: var(--font-mono);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ctp-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-token-breakdown {
+  display: flex;
+  gap: 1rem;
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--ctp-subtext0);
+}
+
+.ov-token-breakdown b {
+  font-weight: 700;
+}
+
+/* Panel grid */
+.ov-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+@media (max-width: 768px) {
+  .ov-grid {
+    grid-template-columns: 1fr;
+  }
+  .ov-stats-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .ov-token-breakdown {
+    margin-left: 0;
+  }
+}
+
+.ov-panel {
+  padding: 0.9rem 1rem;
+}
+
+.ov-panel-title {
+  margin: 0 0 0.6rem;
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.ov-panel-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+/* Data rows */
+.ov-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.2rem 0;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+}
+
+.ov-row-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ctp-subtext1);
+}
+
+.ov-row-value {
+  font-weight: 700;
+  color: var(--ctp-text);
+  min-width: 50px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.ov-row-sub {
+  color: var(--ctp-overlay0);
+  min-width: 40px;
+  text-align: right;
+  font-size: 0.6rem;
+}
+
+.ov-empty {
+  color: var(--ctp-overlay0);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  padding: 1rem 0;
+  text-align: center;
+}
+
+/* Nav tabs for Dashboard / Analytics */
+.ov-nav {
+  display: flex;
+  gap: 0;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(69, 71, 90, 0.3);
+}
+
+.ov-nav-btn {
+  padding: 0.6rem 1.5rem;
+  border: none;
+  cursor: pointer;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.85rem;
+  background: transparent;
+  color: var(--ctp-overlay0);
+  border-bottom: 2px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.ov-nav-btn:hover {
+  color: var(--ctp-text);
+}
+
+.ov-nav-btn--active {
+  color: var(--ctp-lavender);
+  border-bottom-color: var(--ctp-lavender);
+}
+
 /* Recharts tooltip override */
 .recharts-default-tooltip {
   background: rgba(24, 24, 37, 0.95) !important;

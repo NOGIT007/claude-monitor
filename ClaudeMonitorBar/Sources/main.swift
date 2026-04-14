@@ -8,6 +8,14 @@ class ServerManager: ObservableObject {
     @Published var isRunning = false
     @Published var statusText = "Checking..."
 
+    let version: String = {
+        let pkgPath = "/Users/kennetkusk/code/claude-monitoring/package.json"
+        guard let data = try? Data(contentsOf: URL(fileURLWithPath: pkgPath)),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let v = json["version"] as? String else { return "?" }
+        return "v\(v)"
+    }()
+
     private var pollTimer: Timer?
     private let port = 4500
     private let repoPath = "/Users/kennetkusk/code/claude-monitoring"
@@ -172,6 +180,13 @@ struct MenuBarView: View {
                     .frame(width: 8, height: 8)
                 Text("Claude Code Monitor")
                     .font(.headline)
+                Text(serverManager.version)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(Color.secondary.opacity(0.12))
+                    .cornerRadius(4)
                 Spacer()
                 Text(serverManager.statusText)
                     .font(.caption)

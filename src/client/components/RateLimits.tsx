@@ -71,7 +71,7 @@ function Bar({ pct, label }: { pct: number | null; label: string }) {
   );
 }
 
-export function RateLimits() {
+export function RateLimits({ pollInterval = 30000 }: { pollInterval?: number } = {}) {
   const [snapshots, setSnapshots] = useState<UsageSnapshot[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -86,9 +86,9 @@ export function RateLimits() {
         .catch(() => setLoading(false));
 
     fetchData();
-    const interval = setInterval(fetchData, 30000);
+    const interval = setInterval(fetchData, pollInterval);
     return () => clearInterval(interval);
-  }, []);
+  }, [pollInterval]);
 
   if (loading) {
     return <p style={{ color: "var(--ctp-subtext0)", margin: 0, fontSize: "0.75rem" }}>Loading…</p>;
