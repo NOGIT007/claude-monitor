@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## [1.5.0] - 2026-04-14
+## [1.6.0] - 2026-04-14
 
 ### Added
 - **CodeBurn-inspired overview dashboard** — dense, multi-panel layout showing cost, tokens, sessions, cache hit rate, daily activity, projects, models, activity categories, tools, and MCP servers all at once (no tab switching)
