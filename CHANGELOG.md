@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-04-14
+
+### Added
+- **CodeBurn-inspired overview dashboard** — dense, multi-panel layout showing cost, tokens, sessions, cache hit rate, daily activity, projects, models, activity categories, tools, and MCP servers all at once (no tab switching)
+- **HBar gradient component** — horizontal bar visualizations with blue→amber→orange gradient, used across all dashboard panels
+- **Dashboard/Analytics navigation** — top-level toggle between the new overview dashboard and the existing detailed analytics views
+- **Rate limits in dashboard** — integrated rate limit bars directly into the main dashboard with 60s polling interval
+- **Project path normalization** — subdirectories like `scripts/`, `src/`, `raw/` are merged into their parent project for cleaner cost attribution
+- **Activity categories** — tool calls grouped into Coding, Exploration, Testing, Planning, Git, and Delegation categories
+- **MCP server panel** — dedicated panel showing MCP tool usage separated from core tools
+- **Version badge** in macOS menu bar app header
+
+### Changed
+- Default view is now the dense overview dashboard instead of the old vertically stacked sections
+- Rate limits and live sessions removed from Analytics view (now in Dashboard only)
+- `projectName()` strips generic subdirectory suffixes for cleaner display
+
 ## [1.4.0] - 2026-04-12
 
 ### Added

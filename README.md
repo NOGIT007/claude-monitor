@@ -4,16 +4,16 @@ Real-time dashboard for tracking Claude Code usage, costs, and session activity.
 
 ## Features
 
+- **Overview Dashboard** — CodeBurn-inspired dense, multi-panel layout showing cost, tokens, sessions, cache hit, daily activity, projects, models, activity types, tools, and MCP servers — all visible at once
 - **Live Sessions** — Real-time view of all running Claude Code instances with CLI/Desktop icons
-- **Rate Limits** — Session and weekly usage percentage tracking with color-coded bars
-- **Session History** — Per-session metadata table with model, effort level, tokens, cost, pagination and sorting; click any row to see a full tool call + prompt timeline
-- **Usage Statistics** — Today/week/month breakdowns with period comparison badges
-- **Cost per Project** — Top 5 projects + aggregated "Other" bar chart
+- **Rate Limits** — Session and weekly usage percentage tracking with color-coded bars (60s auto-refresh)
+- **Session History** — Per-session metadata table with model, effort level, tokens, cost; click any row for full tool call + prompt timeline
+- **Usage Statistics** — Today/7 Days/30 Days breakdowns with period comparison badges
+- **Cost per Project** — Projects ranked by cost with automatic subdirectory merging
 - **Model Breakdown** — Token distribution across Opus, Sonnet, and Haiku
-- **Cost Trend** — Daily and cumulative cost charts
-- **Peak Hours** — Hourly usage heatmap
-- **Token History** — Daily token breakdown (input, output, cache read, cache write)
+- **Activity Categories** — Tool calls grouped into Coding, Exploration, Testing, Planning, Git, and Delegation
 - **Tool Usage** — Per-tool call counts, durations, error rates, and over-time charts powered by OTEL tracing
+- **MCP Server Analytics** — Dedicated panel for MCP tool usage tracking
 - **Thinking Depth** — Tracks extended thinking frequency and depth across sessions
 - **macOS Menu Bar App** — Native Swift app (`Claude Code Monitor.app`) with live stats, server controls, and quick dashboard access
 - **OTEL Collector** — Built-in OTLP/HTTP endpoint on ports 4500 and 4318 for ingesting Claude Code telemetry
